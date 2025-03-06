@@ -193,10 +193,10 @@ public class FileTransferAppServer extends Application {
                     while (true) {
                         clientSocket = serverSocket.accept();
                         System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
-                        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), false);
+                        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 //                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
                         out.println(encryptedData);
-                        out.flush();
+//                        out.flush();
                         statusArea.appendText("File sent successfully\n");
                     }
                 }
