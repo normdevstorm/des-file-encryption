@@ -1,0 +1,38 @@
+.container {
+    -fx-padding: 20;
+    -fx-background-color: #f5f5f5;
+    -fx-alignment: center;
+    -fx-font-family: "Segoe UI"; /* Thêm font hiện đại */
+}
+
+.title-label {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50; /* Màu xanh đậm hiện đại thay cho #333333 */
+    -fx-padding: 0 0 20 0;
+    -fx-font-family: "Roboto"; /* Font chuyên nghiệp */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1); /* Thêm bóng nhẹ */
+}
+
+.modern-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: #ffffff; /* Màu trắng rõ hơn */
+    -fx-font-size: 14px;
+    -fx-font-weight: bold; /* Chữ đậm cho nút */
+    -fx-padding: 10 20;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-font-family: "Arial"; /* Font đơn giản, dễ đọc */
+}
+
+.modern-button:hover {
+    -fx-background-color: #45a049;
+    -fx-text-fill: #f0f0f0; /* Màu chữ nhạt hơn khi hover */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 3, 0, 0, 1); /* Bóng nổi bật hơn */
+}
+
+.modern-button:disabled {
+    -fx-background-color: #cccccc;
+    -fx-text-fill: #666666; /* Màu xám đậm cho chữ khi disabled */
+    -fx-font-weight: normal; /* Bỏ đậm khi disabled */
+}
