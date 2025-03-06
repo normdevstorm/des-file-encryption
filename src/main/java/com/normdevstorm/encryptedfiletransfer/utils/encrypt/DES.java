@@ -173,6 +173,7 @@ public class  DES {
 			i++;
 		}
 		BufferedImage img = ImageIO.read(new ByteArrayInputStream(filterBytes));
+		i =0;
 	return img;
 	}
 
