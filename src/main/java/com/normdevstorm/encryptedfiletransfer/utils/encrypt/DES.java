@@ -169,11 +169,10 @@ public class  DES {
 		byte[] filterBytes = new byte[bytes.length -1];
 		int i = 0;
 		while(bytes[i] ==0){
-			filterBytes = Arrays.copyOfRange(bytes, i+1, bytes.length);
 			i++;
 		}
+		filterBytes = Arrays.copyOfRange(bytes, i, bytes.length);
 		BufferedImage img = ImageIO.read(new ByteArrayInputStream(filterBytes));
-		i =0;
 	return img;
 	}
 

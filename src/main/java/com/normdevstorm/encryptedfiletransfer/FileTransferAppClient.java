@@ -57,8 +57,8 @@ public class FileTransferAppClient extends Application {
         });
 
 
-            sendBtn.setOnAction(e -> sendFile(FileType.IMAGE));
-            receiveBtn.setOnAction(e -> receiveFile(FileType.IMAGE));
+        sendBtn.setOnAction(e -> sendFile(FileType.IMAGE));
+        receiveBtn.setOnAction(e -> receiveFile(FileType.IMAGE));
 
 
         // Sắp xếp layout
@@ -103,7 +103,6 @@ public class FileTransferAppClient extends Application {
                 break;
         }
 
-
         boolean enc = true;
         ///TODO: read text from file and pass into message args
         ///TODO: GUI
@@ -121,7 +120,6 @@ public class FileTransferAppClient extends Application {
 //            else if (args[i].equals("-d"))
 //                enc = false;
 //        }
-
         if (enc) {
             if (message == null) {
                 System.out.println("No message given to encrypt. Exiting..");
@@ -205,58 +203,48 @@ public class FileTransferAppClient extends Application {
 
     private void receiveFile(FileType type) {
         new Thread(() -> {
-            String message ="";
+            DES des = new DES();
             try {
                 Socket clientSocket = new Socket("localhost", 5000);
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                message = in.readLine();
+                String message = in.readLine();
                 while (message != null) {
-                    DES des = new DES();
-                    String encryptedData = message;
-                    String decryptedString = "";
-                    byte[] decryptedBytes;
-                    switch (type) {
-                        case IMAGE:
-                            try {
-                                encryptedData = new String(Files.readAllBytes(Paths.get("image_encrypted_hex.txt")));
-                                encryptedData = hexToBin(encryptedData);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                            String decryptedBin = des.decrypt("key1", encryptedData);
-                            decryptedBytes = binToBytes(decryptedBin);
-                            System.out.println("decryptedString: " + Arrays.toString(decryptedBytes));
-                            try {
-                                BufferedImage bufferedImage = convertBytesToImage(decryptedBytes);
-                                File outputFile = new File("decrypted_received_file.png" );
-                                ImageIO.write(bufferedImage, "png", outputFile);
-                                statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
-                            } catch (IOException e) {
-                                statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
-                            }
-                            break;
-                        case TEXT:
-                        default:
-                            decryptedString = binToUTF(des.decrypt("key1", hexToBin(encryptedData)));
-                            decryptedBytes = decryptedString.getBytes();
-                            File outputFile = new File("decrypted_text_file");
+                String encryptedData = message;
+                String decryptedString = "";
+                byte[] decryptedBytes;
+                switch (type) {
+                    case IMAGE:
+                        encryptedData = hexToBin(encryptedData);
+                        String decryptedBin = des.decrypt("key1", encryptedData);
+                        decryptedBytes = binToBytes(decryptedBin);
+                        System.out.println("decryptedString: " + Arrays.toString(decryptedBytes));
+                        try {
+                            BufferedImage bufferedImage = convertBytesToImage(decryptedBytes);
+                            File outputFile = new File("decrypted_received_file.png");
+                            ImageIO.write(bufferedImage, "png", outputFile);
                             statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
-                            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                                fos.write(decryptedBytes);
-                            } catch (IOException e) {
-                                statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
-                            }
-                            break;
-                    }
+                        } catch (IOException e) {
+                            statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
+                        }
+                        break;
+                    case TEXT:
+                    default:
+                        decryptedString = binToUTF(des.decrypt("key1", hexToBin(encryptedData)));
+                        decryptedBytes = decryptedString.getBytes();
+                        File outputFile = new File("decrypted_text_file");
+                        statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
+                        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                            fos.write(decryptedBytes);
+                        } catch (IOException e) {
+                            statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
+                        }
+                        break;
+                }
                     message = in.readLine();
                 }
-                in.reset();
-
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
-
         }).start();
     }
 
