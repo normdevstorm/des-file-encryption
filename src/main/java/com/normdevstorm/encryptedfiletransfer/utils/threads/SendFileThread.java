@@ -1,6 +1,6 @@
     package com.normdevstorm.encryptedfiletransfer.utils.threads;
 
-    import com.normdevstorm.encryptedfiletransfer.utils.encrypt.DES;
+    import com.normdevstorm.encryptedfiletransfer.crypto.DES;
     import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 
     import javax.imageio.ImageIO;
@@ -10,8 +10,6 @@
     import java.net.Socket;
 
     import javafx.scene.control.TextArea;
-
-    import static com.normdevstorm.encryptedfiletransfer.utils.encrypt.DES.hexToBin;
 
     public class SendFileThread extends Thread {
         private File selectedFile;
@@ -166,13 +164,14 @@
                 String encryptedData = encryptFile(selectedFile, type);
                 statusArea.appendText("Encrypted file: " + selectedFile.getName() + "\n");
                 statusArea.appendText("Sending file: " + selectedFile.getName() + "\n");
-                Socket clientSocket;
-                clientSocket = serverSocket.accept();
+                    Socket clientSocket;
+                    clientSocket = serverSocket.accept();
                     System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
                     PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-    //                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+                    //                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
                     out.println(encryptedData);
                     statusArea.appendText("File sent successfully\n");
+
 
             } catch (Exception e) {
                 statusArea.appendText("Error sending file: " + e.getMessage() + "\n");

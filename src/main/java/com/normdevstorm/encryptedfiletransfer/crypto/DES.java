@@ -1,4 +1,4 @@
-package com.normdevstorm.encryptedfiletransfer.utils.encrypt;
+package com.normdevstorm.encryptedfiletransfer.crypto;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

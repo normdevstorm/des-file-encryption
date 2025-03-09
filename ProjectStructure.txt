@@ -1,0 +1,26 @@
+encryption_project/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   ├── com/
+│   │   │   │   ├── encryption/
+│   │   │   │   │   ├── server/
+│   │   │   │   │   │   ├── Server.java         # Server main class
+│   │   │   │   │   │   └── ClientHandler.java  # Handles each client connection
+│   │   │   │   │   ├── client/
+│   │   │   │   │   │   └── Client.java         # Client main class
+│   │   │   │   │   ├── crypto/
+│   │   │   │   │   │   └── CryptoUtil.java     # Encryption/decryption logic
+│   │   │   │   │   ├── network/
+│   │   │   │   │   │   └── NetworkUtil.java    # Socket communication utilities
+│   │   │   │   │   └── utils/
+│   │   │   │   │       └── FileUtil.java       # File I/O utilities
+│   │   └── resources/
+│   │       └── config.properties               # Configuration (e.g., port, key)
+│   ├── test/
+│   │   ├── java/
+│   │   │   └── com/encryption/test/
+│   │   │       ├── CryptoTest.java            # Unit tests for crypto
+│   │   │       └── NetworkTest.java           # Unit tests for network
+│   └── pom.xml                                # Maven build file
+└── README.md                                  # Project documentation
