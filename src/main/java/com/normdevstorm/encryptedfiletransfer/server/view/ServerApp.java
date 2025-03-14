@@ -16,7 +16,6 @@ public class ServerApp extends Application {
 
         ServerSocket serverSocket = new ServerSocket(5000);
             /// TODO: add the noti dialog here
-
             //Load FXML
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/normdevstorm/encryptedfiletransfer/server.fxml"));
             Parent root = (Parent) fxmlLoader.load();

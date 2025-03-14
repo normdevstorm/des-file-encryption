@@ -1,6 +1,6 @@
 package com.normdevstorm.encryptedfiletransfer.utils.threads;
 
-import com.normdevstorm.encryptedfiletransfer.crypto.DES;
+import com.normdevstorm.encryptedfiletransfer.crypto.Des;
 import com.normdevstorm.encryptedfiletransfer.model.FileModel;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 import javafx.scene.control.TextArea;
@@ -9,18 +9,19 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.Socket;
-import java.util.Arrays;
 
-import static com.normdevstorm.encryptedfiletransfer.crypto.DES.*;
+
+import static com.normdevstorm.encryptedfiletransfer.crypto.Des.convertBytesToImage;
+import static com.normdevstorm.encryptedfiletransfer.crypto.Des.hexStringToByteArray;
 
 public class ReceiveFileThread extends Thread{
     private final FileType type;
     private final TextArea statusArea;
-    private final DES des;
+    private final Des des;
     private final Socket clientSocket;
 
 
-    public ReceiveFileThread(FileType type, TextArea statusArea, DES des, Socket clientSocket){
+    public ReceiveFileThread(FileType type, TextArea statusArea, Des des, Socket clientSocket){
         this.statusArea = statusArea;
         this.type = type;
         this.des = des;
@@ -34,18 +35,22 @@ public class ReceiveFileThread extends Thread{
         String fileName = fileModel.getFile_name();
         FileType fileType = FileType.getTypeFromExtension(fileModel.getExtension());
 
-        String decryptedData = des.decrypt("key1", hexToBin(encryptDataInHex));
-        processBasedOnTypeAndSaveFile(fileName, fileType, decryptedData);
+        Des des = new Des();
+        //TODO: to dynamically get the key
+        String keyStr = "key123456789";
+        byte[] keyBytes = keyStr.getBytes();
+        byte[] encryptDataByte = hexStringToByteArray(encryptDataInHex);
+        byte[] decryptedDataByte = des.encrypt(encryptDataByte, keyBytes, true);
+
+        processBasedOnTypeAndSaveFile(fileName, fileType, decryptedDataByte);
     }
 
-    private void processBasedOnTypeAndSaveFile(String fileName, FileType type, String decryptDataInBinary){
-        byte[] decryptedBytes;
+    private void processBasedOnTypeAndSaveFile(String fileName, FileType type, byte[] decryptDataByte){
         switch (type) {
             case IMAGE:
-                decryptedBytes = binToBytes(decryptDataInBinary);
-                System.out.println("Decrypt content of image file " + fileName + " is :" + Arrays.toString(decryptedBytes));
+                System.out.println("Decrypt content of image file " + fileName + " is :" + new String(decryptDataByte));
                 try {
-                    BufferedImage bufferedImage = convertBytesToImage(decryptedBytes);
+                    BufferedImage bufferedImage = convertBytesToImage(decryptDataByte);
                     File outputFile = new File( fileName +".png");
                     ImageIO.write(bufferedImage, "png", outputFile);
                     statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
@@ -55,19 +60,16 @@ public class ReceiveFileThread extends Thread{
                 break;
             case TEXT:
             default:
-                String decryptedString = binToUTF(decryptDataInBinary);
-                decryptedBytes = decryptedString.getBytes();
                 File outputFile = new File(fileName + ".txt");
                 statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
                 try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                    fos.write(decryptedBytes);
+                    fos.write(decryptDataByte);
                 } catch (IOException e) {
                     statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
                 }
                 break;
         }
     }
-
 
 
     @Override

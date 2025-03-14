@@ -1,21 +1,22 @@
     package com.normdevstorm.encryptedfiletransfer.utils.threads;
 
-    import com.normdevstorm.encryptedfiletransfer.crypto.DES;
+    import com.normdevstorm.encryptedfiletransfer.crypto.Des;
     import com.normdevstorm.encryptedfiletransfer.model.FileModel;
     import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 
     import javax.imageio.ImageIO;
     import java.awt.image.BufferedImage;
     import java.io.*;
-    import java.lang.reflect.Array;
     import java.net.ServerSocket;
     import java.net.Socket;
     import java.time.LocalDateTime;
-    import java.util.ArrayList;
     import java.util.Arrays;
     import java.util.List;
 
     import javafx.scene.control.TextArea;
+
+    import static com.normdevstorm.encryptedfiletransfer.crypto.Des.byteArrayToHexString;
+    import static com.normdevstorm.encryptedfiletransfer.crypto.Des.convertImageToBytes;
 
     public class SendFileThread extends Thread {
         private File selectedFile;
@@ -51,114 +52,35 @@
 
         private String encryptFile(File inputFile, FileType type) throws Exception {
 
-            DES des = new DES();
+            Des des = new Des();
+            //TODO: to dynamically get the key
+            String keyStr = "key123456789";
+
+            byte[] keyBytes = keyStr.getBytes();
             byte[] fileBytes;
-            String message = "";
 
             switch (type) {
                 case FileType.IMAGE:
                     BufferedImage image = ImageIO.read(inputFile);
-                    fileBytes = DES.convertImageToBytes(image);
-                    StringBuilder messageBuilder = new StringBuilder();
-                    for (byte b : fileBytes) {
-                        messageBuilder.append(String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0'));
-                    }
-                    message = messageBuilder.toString();
-    //            System.out.println( "message: " + message);
+                    fileBytes = convertImageToBytes(image);
                     break;
                 case FileType.TEXT:
                 default:
                     fileBytes = new byte[(int) inputFile.length()];
                     try (FileInputStream fis = new FileInputStream(inputFile)) {
                         fis.read(fileBytes);
-                        message = DES.utfToBin(new String(fileBytes, "UTF-8"));
                     }
                     break;
             }
 
+            byte[] encryptedBytes = des.encrypt(fileBytes, keyBytes, false);
+            StringBuilder encryptedHex = byteArrayToHexString(encryptedBytes);
+            System.out.println("Encrypted (hex): " + encryptedHex);
+            return encryptedHex.toString();
 
-            boolean enc = true;
             ///TODO: read text from file and pass into message args
             ///TODO: GUI
-            String key1 = "key1", key2 = null, key3 = null, result = null;
-            result = des.encrypt(key1, message);
-            System.out.println(DES.binToHex(result));
 
-
-    //       for (int i = 0; i < args.length; i++) {
-    //            if (args[i].equals("-k1"))
-    //                key1 = args[++i];
-    //            else if (args[i].equals("-k2"))
-    //                key2 = args[++i];
-    //            else if (args[i].equals("-k3"))
-    //                key3 = args[++i];
-    //            else if (args[i].equals("-m"))
-    //                message = args[++i];
-    //            else if (args[i].equals("-d"))
-    //                enc = false;
-    //        }
-
-    //        if (enc) {
-    //            if (message == null) {
-    //                System.out.println("No message given to encrypt. Exiting..");
-    //                System.exit(0);
-    //            } else if (key1 == null) {
-    //                System.out.println("Improper use of key arguments. Exiting..");
-    //                System.exit(0);
-    //            }
-    //
-    //            if (key2 == null) {
-    //                if (key3 != null) {
-    //                    System.out.println("Improper use of key arguments. Exiting..");
-    //                    System.exit(0);
-    //                }
-    //                result = des.encrypt(key1, message);
-    ////                /// TODO: gather all the convert format functions into a separate file, for the purpose of debugging
-    ////                if (type == FileType.IMAGE) {
-    ////                    try (FileOutputStream fos = new FileOutputStream("image_encrypted_hex.txt")) {
-    ////                        fos.write(DES.binToHex(result).getBytes());
-    ////                    } catch (FileNotFoundException e) {
-    ////                        throw new RuntimeException(e);
-    ////                    } catch (IOException e) {
-    ////                        throw new RuntimeException(e);
-    ////                    }
-    ////                }
-    //                System.out.println(DES.binToHex(result));
-    //            } else {
-    //                if (key3 == null) {
-    //                    System.out.println("Improper use of key arguments. Exiting..");
-    //                    System.exit(0);
-    //                }
-    //                result = des.encrypt(key3, des.decrypt(key2, des.encrypt(key1, DES.utfToBin(message))));
-    //                System.out.println(DES.binToHex(result));
-    //            }
-    //        }
-    //        else {
-    //            if (message == null) {
-    //                System.out.println("No data given to decrypt. Exiting..");
-    //                System.exit(0);
-    //            } else if (key1 == null) {
-    //                System.out.println("Improper use of key arguments. Exiting..");
-    //                System.exit(0);
-    //            }
-    //
-    //            if (key2 == null) {
-    //                if (key3 != null) {
-    //                    System.out.println("Improper use of key arguments. Exiting..");
-    //                    System.exit(0);
-    //                }
-    //                result = des.decrypt(key1, DES.hexToBin(message));
-    //                System.out.println(DES.binToUTF(result));
-    //            } else {
-    //                if (key3 == null) {
-    //                    System.out.println("Improper use of key arguments. Exiting..");
-    //                    System.exit(0);
-    //                }
-    //                result = des.decrypt(key1, des.encrypt(key2, des.decrypt(key3, hexToBin(message))));
-    //                System.out.println(DES.binToUTF(result));
-    //            }
-    //        }
-            return DES.binToHex(result);
         }
 
         private String processFile() throws Exception {
@@ -169,7 +91,6 @@
             FileType fileType = FileType.getTypeFromExtension(extension);
             Long size = selectedFile.getTotalSpace();
             String content = encryptFile(selectedFile, fileType);
-
             // wrap with file model
             FileModel fileModel = new FileModel(fileName, extension, size, LocalDateTime.now(),content);
             return fileModel.toString();
@@ -187,10 +108,9 @@
                     clientSocket = serverSocket.accept();
                     System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
                     PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-                    //                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+                    //BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
                     out.println(encryptedData);
                     statusArea.appendText("File sent successfully\n");
-
             } catch (Exception e) {
                 statusArea.appendText("Error sending file: " + e.getMessage() + "\n");
             }
