@@ -2,86 +2,79 @@ package com.normdevstorm.encryptedfiletransfer.client.controller;
 
 import com.normdevstorm.encryptedfiletransfer.crypto.DES;
 import com.normdevstorm.encryptedfiletransfer.model.GenericUIController;
-import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.net.Socket;
-import java.util.Arrays;
-
 import javafx.scene.control.Button;
-import javafx.stage.Stage;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 
-
-import static com.normdevstorm.encryptedfiletransfer.crypto.DES.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 
 public class ClientController extends GenericUIController {
 
     @FXML
     private Button receiveBtn;
-    private Stage stage;
+    @FXML
+    private Button decryptBtn;
+    @FXML
+    private TextArea statusArea;
+    @FXML
+    private TextField decryptionKeyInput;
+
+    private String lastEncryptedMessage;
 
     public void initializeController() {
         eventHandlers();
     }
 
-
     @Override
     public void eventHandlers() {
-        receiveBtn.setOnAction(actionEvent -> {
-                    receiveFile(FileType.IMAGE);
-                }
-        );
-
-
+        receiveBtn.setOnAction(actionEvent -> receiveMessage());
+        decryptBtn.setOnAction(actionEvent -> decryptMessage());
     }
 
-    private void receiveFile(FileType type) {
+    private void receiveMessage() {
         new Thread(() -> {
-            DES des = new DES();
-            try {
-                Socket clientSocket = new Socket("localhost", 5000);
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                String message = in.readLine();
-                while (message != null) {
-                    String encryptedData = message;
-                    String decryptedString = "";
-                    byte[] decryptedBytes;
-                    switch (type) {
-                        case IMAGE:
-                            encryptedData = hexToBin(encryptedData);
-                            String decryptedBin = des.decrypt("key1", encryptedData);
-                            decryptedBytes = binToBytes(decryptedBin);
-                            System.out.println("decryptedString: " + Arrays.toString(decryptedBytes));
-                            try {
-                                BufferedImage bufferedImage = convertBytesToImage(decryptedBytes);
-                                File outputFile = new File("decrypted_received_file.png");
-                                ImageIO.write(bufferedImage, "png", outputFile);
-                                statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
-                            } catch (IOException e) {
-                                statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
-                            }
-                            break;
-                        case TEXT:
-                        default:
-                            decryptedString = binToUTF(des.decrypt("key1", hexToBin(encryptedData)));
-                            decryptedBytes = decryptedString.getBytes();
-                            File outputFile = new File("decrypted_text_file");
-                            statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
-                            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                                fos.write(decryptedBytes);
-                            } catch (IOException e) {
-                                statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
-                            }
-                            break;
-                    }
-                    message = in.readLine();
+            try (Socket clientSocket = new Socket("localhost", 5000);
+                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+
+                lastEncryptedMessage = in.readLine();
+                if (lastEncryptedMessage != null) {
+                    Platform.runLater(() -> statusArea.appendText("Encrypted message received (HEX): " + lastEncryptedMessage + "\n"));
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+
+            } catch (Exception e) {
+                Platform.runLater(() -> statusArea.appendText("Error receiving message: " + e.getMessage() + "\n"));
             }
         }).start();
+    }
+
+    private void decryptMessage() {
+        if (lastEncryptedMessage == null || lastEncryptedMessage.isEmpty()) {
+            Platform.runLater(() -> statusArea.appendText("No encrypted message to decrypt!\n"));
+            return;
+        }
+
+        String providedKey = decryptionKeyInput.getText();
+        if (providedKey == null || providedKey.isEmpty()) {
+            Platform.runLater(() -> statusArea.appendText("Please enter a decryption key!\n"));
+            return;
+        }
+
+        try {
+            DES des = new DES();
+            String binaryMessage = DES.hexToBin(lastEncryptedMessage);
+            String decryptedBinary = des.decrypt(providedKey, binaryMessage);
+            String decryptedMessage = new String(DES.binToUTF(decryptedBinary).getBytes(), "UTF-8");
+
+            // Giữ nguyên các khoảng trắng bằng cách bao chuỗi trong dấu ngoặc kép
+            Platform.runLater(() -> statusArea.appendText("Decrypted message: " + decryptedMessage + "\n"));
+        } catch (Exception e) {
+            Platform.runLater(() -> statusArea.appendText("Decryption failed: Incorrect key or invalid data!\n"));
+        }
     }
 }
