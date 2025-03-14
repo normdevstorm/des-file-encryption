@@ -12,7 +12,5 @@ abstract public  class GenericUIController {
         @FXML public Label titleLabel;
         @FXML public Button selectFileBtn;
         @FXML public TextArea statusArea;
-
         abstract public void eventHandlers();
-
 }

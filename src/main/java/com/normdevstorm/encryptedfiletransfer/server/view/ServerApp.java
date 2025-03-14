@@ -34,8 +34,6 @@ public class ServerApp extends Application {
 
         }
     public static void main(String[] args) {
-
         launch(args);
-
     }
 }

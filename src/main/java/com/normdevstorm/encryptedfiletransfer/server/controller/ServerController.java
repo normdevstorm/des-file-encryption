@@ -50,7 +50,6 @@ public class ServerController extends GenericUIController {
                 statusArea.appendText("Error sending file: " + selectedFile.getName() + ex.getMessage());
             }
         });
-
     }
 
     private synchronized void sendFile(ServerSocket serverSocket) {
@@ -63,6 +62,5 @@ public class ServerController extends GenericUIController {
             /// TODO: add showDialog here
             System.out.println("File is null !!!");
         }
-
     }
 }
