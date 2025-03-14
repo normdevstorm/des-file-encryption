@@ -1,13 +1,19 @@
     package com.normdevstorm.encryptedfiletransfer.utils.threads;
 
     import com.normdevstorm.encryptedfiletransfer.crypto.DES;
+    import com.normdevstorm.encryptedfiletransfer.model.FileModel;
     import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 
     import javax.imageio.ImageIO;
     import java.awt.image.BufferedImage;
     import java.io.*;
+    import java.lang.reflect.Array;
     import java.net.ServerSocket;
     import java.net.Socket;
+    import java.time.LocalDateTime;
+    import java.util.ArrayList;
+    import java.util.Arrays;
+    import java.util.List;
 
     import javafx.scene.control.TextArea;
 
@@ -155,13 +161,26 @@
             return DES.binToHex(result);
         }
 
+        private String processFile() throws Exception {
+            // metadata
+            List<String> fileNameWithExt = Arrays.stream(selectedFile.getName().split("\\.")).toList();
+            String fileName = fileNameWithExt.get(0);
+            String extension = fileNameWithExt.get(1);
+            FileType fileType = FileType.getTypeFromExtension(extension);
+            Long size = selectedFile.getTotalSpace();
+            String content = encryptFile(selectedFile, fileType);
+
+            // wrap with file model
+            FileModel fileModel = new FileModel(fileName, extension, size, LocalDateTime.now(),content);
+            return fileModel.toString();
+        }
 
         @Override
         public void run() {
             // encrypt and send files right below
             try {
                 statusArea.appendText("Encrypting file: " + selectedFile.getAbsolutePath() + "\n");
-                String encryptedData = encryptFile(selectedFile, type);
+                String encryptedData = processFile();
                 statusArea.appendText("Encrypted file: " + selectedFile.getName() + "\n");
                 statusArea.appendText("Sending file: " + selectedFile.getName() + "\n");
                     Socket clientSocket;
@@ -171,7 +190,6 @@
                     //                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
                     out.println(encryptedData);
                     statusArea.appendText("File sent successfully\n");
-
 
             } catch (Exception e) {
                 statusArea.appendText("Error sending file: " + e.getMessage() + "\n");
