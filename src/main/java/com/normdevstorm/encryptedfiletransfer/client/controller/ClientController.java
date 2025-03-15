@@ -1,7 +1,6 @@
 package com.normdevstorm.encryptedfiletransfer.client.controller;
 
 import com.normdevstorm.encryptedfiletransfer.crypto.Des;
-import com.normdevstorm.encryptedfiletransfer.crypto.RSA;
 import com.normdevstorm.encryptedfiletransfer.model.GenericUIController;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
@@ -10,8 +9,6 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import java.io.*;
 import java.net.Socket;
-import java.util.Map;
-import java.util.Objects;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;

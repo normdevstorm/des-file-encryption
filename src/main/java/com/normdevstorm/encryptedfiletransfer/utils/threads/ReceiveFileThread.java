@@ -1,7 +1,7 @@
 package com.normdevstorm.encryptedfiletransfer.utils.threads;
 
 import com.normdevstorm.encryptedfiletransfer.crypto.Des;
-import com.normdevstorm.encryptedfiletransfer.crypto.RSA;
+import com.normdevstorm.encryptedfiletransfer.crypto.Rsa;
 import com.normdevstorm.encryptedfiletransfer.model.FileModel;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
@@ -37,7 +37,7 @@ public class ReceiveFileThread extends Thread{
     private String performHandShakeProtocol(Socket clientSocket, PrintWriter out, BufferedReader in) {
         try {
             // generate key pairs
-            RSA rsa = new RSA();
+            Rsa rsa = new Rsa();
             Map<String, BigInteger> keyPairs = rsa.generateKeyPairs("Hello from client");
             String publicKey = keyPairs.get("public_key").toString();
             String n = keyPairs.get("n_modulus").toString();
@@ -59,7 +59,7 @@ public class ReceiveFileThread extends Thread{
 
             }
             System.out.println("Encrypted key: " + encryptedKey);
-            String decryptedKey =  new String (RSA.decrypt(new BigInteger(encryptedKey), keyPairs.get("private_key"), keyPairs.get("n_modulus")).toByteArray());
+            String decryptedKey =  new String (Rsa.decrypt(new BigInteger(encryptedKey), keyPairs.get("private_key"), keyPairs.get("n_modulus")).toByteArray());
             System.out.println("Decrypted key: " + decryptedKey);
 
             statusArea.appendText("Received encrypted key from server: " + encryptedKey + "\n");

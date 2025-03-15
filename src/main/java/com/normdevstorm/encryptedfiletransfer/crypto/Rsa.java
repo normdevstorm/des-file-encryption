@@ -9,7 +9,7 @@ import java.util.Random;
  * Quick and dirty implementation of the RSA algorithm
  * Read through main() for a breakdown on the RSA workings
  */
-public class RSA {
+public class Rsa {
     public Map<String, BigInteger> generateKeyPairs(String message) {
         // 1. Find large primes p and q
         BigInteger p = largePrime(2048);

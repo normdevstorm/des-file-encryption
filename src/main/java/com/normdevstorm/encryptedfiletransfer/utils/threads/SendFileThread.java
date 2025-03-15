@@ -1,7 +1,7 @@
     package com.normdevstorm.encryptedfiletransfer.utils.threads;
 
     import com.normdevstorm.encryptedfiletransfer.crypto.Des;
-    import com.normdevstorm.encryptedfiletransfer.crypto.RSA;
+    import com.normdevstorm.encryptedfiletransfer.crypto.Rsa;
     import com.normdevstorm.encryptedfiletransfer.model.FileModel;
     import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 
@@ -58,7 +58,7 @@
             //TODO: dynamically assign
             String key = "Default Message !!!";
             try {
-                RSA rsa = new RSA();
+                Rsa rsa = new Rsa();
                 Socket clientSocket = null;
                 // generate key pairs
                 while (clientPublicKeyWithNModulus == null) {
@@ -80,7 +80,7 @@
                     System.out.println("Client public key: " + clientPublicKey.toString());
                     System.out.println("N_modulus: " + clientN.toString());
 
-                    String encryptedKey = RSA.encrypt(new BigInteger(key.getBytes()), clientPublicKey, clientN).toString();
+                    String encryptedKey = Rsa.encrypt(new BigInteger(key.getBytes()), clientPublicKey, clientN).toString();
 
                     out.println(encryptedKey);
                     System.out.println("Encrypted key: " + encryptedKey);
