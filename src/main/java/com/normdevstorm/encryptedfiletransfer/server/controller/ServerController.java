@@ -1,5 +1,4 @@
 package com.normdevstorm.encryptedfiletransfer.server.controller;
-
 import com.normdevstorm.encryptedfiletransfer.model.GenericUIController;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 import com.normdevstorm.encryptedfiletransfer.utils.threads.SendFileThread;
@@ -9,8 +8,9 @@ import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.File;
+import java.io.*;
 import java.net.ServerSocket;
+
 
 public class ServerController extends GenericUIController {
 
@@ -28,28 +28,30 @@ public class ServerController extends GenericUIController {
         this.stage = stage;
         eventHandlers();
     }
+
+
     @Override
     public void eventHandlers() {
-        FileChooser fileChooser = new FileChooser();
-        selectFileBtn.setOnAction(e -> {
-            try {
-                selectedFile = fileChooser.showOpenDialog(stage);
-                if (selectedFile != null) {
-                    statusArea.appendText("Selected: " + selectedFile.getName() + "\n");
-                    sendBtn.setDisable(false);
+            FileChooser fileChooser = new FileChooser();
+            selectFileBtn.setOnAction(e -> {
+                try {
+                    selectedFile = fileChooser.showOpenDialog(stage);
+                    if (selectedFile != null) {
+                        statusArea.appendText("Selected: " + selectedFile.getName() + "\n");
+                        sendBtn.setDisable(false);
+                    }
+                } catch (Exception ex) {
+                    statusArea.appendText("Error occurred when trying to choosing files !!!");
                 }
-            } catch (Exception ex) {
-                statusArea.appendText("Error occured when trying to choosing files !!!");
-            }
-        });
+            });
 
-        sendBtn.setOnAction(e -> {
-            try {
-                sendFile(serverSocket);
-            } catch (Exception ex) {
-                statusArea.appendText("Error sending file: " + selectedFile.getName() + ex.getMessage());
-            }
-        });
+            sendBtn.setOnAction(e -> {
+                try {
+                    sendFile(serverSocket);
+                } catch (Exception ex) {
+                    statusArea.appendText("Error sending file: " + selectedFile.getName() + ex.getMessage());
+                }
+            });
     }
 
     private synchronized void sendFile(ServerSocket serverSocket) {
