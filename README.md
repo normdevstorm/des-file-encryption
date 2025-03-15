@@ -2,6 +2,7 @@
 * This project is dedicated to leverage DES encryption algorithm for sending  files across computers securely.
 ## Features
 * ##### Encrypt and decrypt files (of text and image format) using DES algorithm
+* ##### Exchange keys securely using RSA key exchange
 * ##### Sending files across computers using Socket TCP
 ## Project structure
 
