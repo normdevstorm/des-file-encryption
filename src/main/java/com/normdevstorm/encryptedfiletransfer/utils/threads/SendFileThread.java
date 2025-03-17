@@ -94,7 +94,7 @@
             return key;
         }
 
-        private String encryptFile(File inputFile, FileType type,BufferedReader in,  PrintWriter out) throws Exception {
+        private String encryptFile(File inputFile, BufferedReader in,  PrintWriter out) throws Exception {
             String clientPublicKey = performHandShakeProtocol(in, out);
 
             if(clientPublicKey == null){
@@ -108,19 +108,11 @@
             byte[] keyBytes = keyStr.getBytes();
             byte[] fileBytes;
 
-            switch (type) {
-                case FileType.IMAGE:
-                    BufferedImage image = ImageIO.read(inputFile);
-                    fileBytes = convertImageToBytes(image);
-                    break;
-                case FileType.TEXT:
-                default:
-                    fileBytes = new byte[(int) inputFile.length()];
-                    try (FileInputStream fis = new FileInputStream(inputFile)) {
-                        fis.read(fileBytes);
-                    }
-                    break;
+            fileBytes = new byte[(int) inputFile.length()];
+            try (FileInputStream fis = new FileInputStream(inputFile)) {
+                fis.read(fileBytes);
             }
+
             statusArea.appendText("Start encrypting file: " + inputFile.getName() + "\n");
             byte[] encryptedBytes = des.encrypt(fileBytes, keyBytes, false);
             StringBuilder encryptedHex = byteArrayToHexString(encryptedBytes);
@@ -135,9 +127,9 @@
             String extension = fileNameWithExt.get(1);
             FileType fileType = FileType.getTypeFromExtension(extension);
             Long size = selectedFile.getTotalSpace();
-            String content = encryptFile(selectedFile, fileType, in, out);
+            String content = encryptFile(selectedFile, in, out);
             // wrap with file model
-            FileModel fileModel = new FileModel(fileName, extension, size, LocalDateTime.now(),content);
+            FileModel fileModel = new FileModel(selectedFile.getName(), extension, size, LocalDateTime.now(),content);
             return fileModel.toString();
         }
 

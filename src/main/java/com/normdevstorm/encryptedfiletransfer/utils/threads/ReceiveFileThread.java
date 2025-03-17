@@ -88,33 +88,16 @@ public class ReceiveFileThread extends Thread{
         byte[] encryptDataByte = hexStringToByteArray(encryptDataInHex);
         byte[] decryptedDataByte = des.encrypt(encryptDataByte, keyBytes, true);
         System.out.println("Decrypt content of file " + fileName + " is :" + new String(decryptedDataByte));
-
-        processBasedOnTypeAndSaveFile(fileName, fileType, decryptedDataByte);
+        processBasedOnTypeAndSaveFile(fileName, decryptedDataByte);
     }
 
-    private void processBasedOnTypeAndSaveFile(String fileName, FileType type, byte[] decryptDataByte){
-        switch (type) {
-            case IMAGE:
-                System.out.println("Decrypt content of image file " + fileName + " is :" + new String(decryptDataByte));
-                try {
-                    BufferedImage bufferedImage = convertBytesToImage(decryptDataByte);
-                    File outputFile = new File( fileName +".png");
-                    ImageIO.write(bufferedImage, "png", outputFile);
-                    statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
-                } catch (IOException e) {
-                    statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
-                }
-                break;
-            case TEXT:
-            default:
-                File outputFile = new File(fileName + ".txt");
-                statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
-                try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                    fos.write(decryptDataByte);
-                } catch (IOException e) {
-                    statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
-                }
-                break;
+    private void processBasedOnTypeAndSaveFile(String fileName, byte[] decryptDataByte){
+        File outputFile = new File(fileName);
+        statusArea.appendText("File received and decrypted: " + outputFile.getName() + "\n");
+        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+            fos.write(decryptDataByte);
+        } catch (IOException e) {
+            statusArea.appendText("Error receiving file: " + e.getMessage() + "\n");
         }
     }
 
