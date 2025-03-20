@@ -1,22 +1,15 @@
 package com.normdevstorm.encryptedfiletransfer.utils.threads;
-
 import com.normdevstorm.encryptedfiletransfer.crypto.Des;
 import com.normdevstorm.encryptedfiletransfer.crypto.Rsa;
 import com.normdevstorm.encryptedfiletransfer.model.FileModel;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 import javafx.scene.control.TextArea;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.Map;
-import java.util.Objects;
 
-
-import static com.normdevstorm.encryptedfiletransfer.crypto.Des.convertBytesToImage;
 import static com.normdevstorm.encryptedfiletransfer.crypto.Des.hexStringToByteArray;
 
 public class ReceiveFileThread extends Thread{
@@ -34,7 +27,7 @@ public class ReceiveFileThread extends Thread{
         this.clientSocket = clientSocket;
     }
 
-    private String performHandShakeProtocol(Socket clientSocket, PrintWriter out, BufferedReader in) {
+    private String performHandShakeProtocol(Socket clientSocket, BufferedWriter out, BufferedReader in) {
         try {
             // generate key pairs
             Rsa rsa = new Rsa();
@@ -48,12 +41,18 @@ public class ReceiveFileThread extends Thread{
 
             statusArea.appendText("Handshake protocol started !!! \n");
             String handShakeTrigger;
-            while(!Objects.equals(handShakeTrigger = in.readLine(), "Start handshake protocol")){
-                System.out.println("Wait for handshake trigger from server");
+            while ((handShakeTrigger = in.readLine()) == null || !handShakeTrigger.equals("Start handshake protocol")) {
+                if (handShakeTrigger != null) {
+                    System.out.println(handShakeTrigger);
+                    System.out.println("Wait for handshake trigger from server");
+                }
             }
-            out.println("Yes");
+            out.write("Yes\n");
+            out.flush();
 
-            out.println(publicKey + "," + n);
+            out.write(publicKey + "," + n + "\n");
+            out.flush();
+
             while((encryptedKey = in.readLine()) == null){
                 System.out.println("Wait for server encrypted key");
 
@@ -108,7 +107,7 @@ public class ReceiveFileThread extends Thread{
             if(clientSocket.isClosed()){
                 clientSocket = new Socket("localhost", 5000);
             }
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             String key = performHandShakeProtocol(clientSocket, out,in);
 //            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));

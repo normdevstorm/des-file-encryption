@@ -53,7 +53,7 @@
             return statusArea;
         }
 
-        private String performHandShakeProtocol(BufferedReader in, PrintWriter out) {
+        private String performHandShakeProtocol(BufferedReader in, BufferedWriter out) {
             String clientPublicKeyWithNModulus = null;
             //TODO: dynamically assign
             String key = "Default Message !!!";
@@ -62,18 +62,21 @@
                 Socket clientSocket = null;
                 // generate key pairs
                 while (clientPublicKeyWithNModulus == null) {
-//                    clientSocket = serverSocket.accept();
-                    out.println("Start handshake protocol");
+                    out.write("Start handshake protocol\n");
+                    out.flush(); // Ensure the message is sent immediately
                     String handShakeConfirm;
-                    while(!Objects.equals(handShakeConfirm = in.readLine(), "Yes")){
-                        System.out.println("Waiting for client to confirm");
+                    while((handShakeConfirm = in.readLine()) == null || !handShakeConfirm.equals("Yes")){
+                        if(handShakeConfirm != null){
+                            System.out.println(handShakeConfirm);
+                            System.out.println("Waiting for client to confirm");
+                        }
                     }
 //                        out.println(keyPairs.get("public_key"));
                     while ((clientPublicKeyWithNModulus = in.readLine()) == null){
+                        System.out.println("Waiting for client to send public key with modulus");
                     }
                     System.out.println("Client public key with n: " + clientPublicKeyWithNModulus);
 
-                    //TODO: del later on
                     String[] parts = clientPublicKeyWithNModulus.split(",");
                     BigInteger clientPublicKey = new BigInteger(parts[0]);
                     BigInteger clientN = new BigInteger(parts[1]);
@@ -82,7 +85,8 @@
 
                     String encryptedKey = Rsa.encrypt(new BigInteger(key.getBytes()), clientPublicKey, clientN).toString();
 
-                    out.println(encryptedKey);
+                    out.write(encryptedKey + "\n");
+                    out.flush();
                     System.out.println("Encrypted key: " + encryptedKey);
 
                      statusArea.appendText("Handshake successfully !!! \n");
@@ -94,7 +98,7 @@
             return key;
         }
 
-        private String encryptFile(File inputFile, BufferedReader in,  PrintWriter out) throws Exception {
+        private String encryptFile(File inputFile, BufferedReader in,  BufferedWriter out) throws Exception {
             String clientPublicKey = performHandShakeProtocol(in, out);
 
             if(clientPublicKey == null){
@@ -120,7 +124,7 @@
             return encryptedHex.toString();
         }
 
-        private String processFile(BufferedReader in, PrintWriter out) throws Exception {
+        private String processFile(BufferedReader in, BufferedWriter out) throws Exception {
             // metadata
             List<String> fileNameWithExt = Arrays.stream(selectedFile.getName().split("\\.")).toList();
             String fileName = fileNameWithExt.get(0);
@@ -139,13 +143,14 @@
                 Socket clientSocket;
                 clientSocket = serverSocket.accept();
                 System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
-                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 String encryptedData = processFile(in, out);
                 statusArea.appendText("Encrypted file: " + selectedFile.getName() + "\n");
                 statusArea.appendText("Sending file: " + selectedFile.getName() + "\n");
                     //BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-                    out.println(encryptedData);
+                    out.write(encryptedData + "\n");
+                    out.flush();
                     statusArea.appendText("File sent successfully\n");
                     in.close();
                     out.close();
