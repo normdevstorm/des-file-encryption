@@ -1,161 +1,192 @@
-    package com.normdevstorm.encryptedfiletransfer.utils.threads;
+package com.normdevstorm.encryptedfiletransfer.utils.threads;
+import com.normdevstorm.encryptedfiletransfer.crypto.Des;
+import com.normdevstorm.encryptedfiletransfer.crypto.Rsa;
+import com.normdevstorm.encryptedfiletransfer.model.FileMetadata;
+import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
+import javafx.scene.control.TextArea;
+import java.io.*;
+import java.math.BigInteger;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.time.LocalDateTime;
 
-    import com.normdevstorm.encryptedfiletransfer.crypto.Des;
-    import com.normdevstorm.encryptedfiletransfer.crypto.Rsa;
-    import com.normdevstorm.encryptedfiletransfer.model.FileModel;
-    import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
+public class SendFileThread extends Thread {
+    private static final int CHUNK_SIZE = 8096; // 1 KB chunk size
+    private static final int MAX_RETRIES = 3;
+    private static final int ACK_TIMEOUT = 5000; // 5 seconds
 
-    import javax.imageio.ImageIO;
-    import java.awt.image.BufferedImage;
-    import java.io.*;
-    import java.math.BigInteger;
-    import java.net.ServerSocket;
-    import java.net.Socket;
-    import java.time.LocalDateTime;
-    import java.util.Arrays;
-    import java.util.List;
-    import java.util.Objects;
+    private File selectedFile;
+    private FileType type;
+    private final TextArea statusArea;
+    private final ServerSocket serverSocket;
 
-    import javafx.scene.control.TextArea;
+    public SendFileThread(TextArea statusArea, ServerSocket serverSocket) {
+        this.statusArea = statusArea;
+        this.serverSocket = serverSocket;
+    }
 
-    import static com.normdevstorm.encryptedfiletransfer.crypto.Des.byteArrayToHexString;
-    import static com.normdevstorm.encryptedfiletransfer.crypto.Des.convertImageToBytes;
+    public File getSelectedFile() {
+        return selectedFile;
+    }
 
-    public class SendFileThread extends Thread {
-        private File selectedFile;
-        private FileType type;
-        private final TextArea statusArea;
-        private final ServerSocket serverSocket;
+    public void setSelectedFile(File selectedFile) {
+        this.selectedFile = selectedFile;
+    }
 
+    public FileType getType() {
+        return type;
+    }
 
-        public SendFileThread(TextArea statusArea, ServerSocket serverSocket) {
-            this.statusArea = statusArea;
-            this.serverSocket = serverSocket;
-        }
+    public void setType(FileType type) {
+        this.type = type;
+    }
 
-        public File getSelectedFile() {
-            return selectedFile;
-        }
+    public TextArea getStatusArea() {
+        return statusArea;
+    }
 
-        public void setSelectedFile(File selectedFile) {
-            this.selectedFile = selectedFile;
-        }
+    private boolean performHandShakeProtocol(BufferedReader in, BufferedWriter out, String key) {
+        String clientPublicKeyWithNModulus = null;
+        FileMetadata fileMetadata = new FileMetadata(selectedFile.getName(), selectedFile.length(), LocalDateTime.now());
 
-        public FileType getType() {
-            return type;
-        }
+        try {
+            while (clientPublicKeyWithNModulus == null) {
+                out.write("Start handshake protocol\n");
+                out.flush();
 
-        public void setType(FileType type) {
-            this.type = type;
-        }
-
-        public TextArea getStatusArea() {
-            return statusArea;
-        }
-
-        private String performHandShakeProtocol(BufferedReader in, BufferedWriter out) {
-            String clientPublicKeyWithNModulus = null;
-            //TODO: dynamically assign
-            String key = "Default Message !!!";
-            try {
-                Rsa rsa = new Rsa();
-                Socket clientSocket = null;
-                // generate key pairs
-                while (clientPublicKeyWithNModulus == null) {
-                    out.write("Start handshake protocol\n");
-                    out.flush(); // Ensure the message is sent immediately
-                    String handShakeConfirm;
-                    while((handShakeConfirm = in.readLine()) == null || !handShakeConfirm.equals("Yes")){
-                        if(handShakeConfirm != null){
-                            System.out.println(handShakeConfirm);
-                            System.out.println("Waiting for client to confirm");
-                        }
+                String handShakeConfirm;
+                while ((handShakeConfirm = in.readLine()) == null || !handShakeConfirm.equals("Yes")) {
+                    if (handShakeConfirm != null) {
+                        System.out.println(handShakeConfirm);
+                        System.out.println("Waiting for client to confirm");
                     }
-//                        out.println(keyPairs.get("public_key"));
-                    while ((clientPublicKeyWithNModulus = in.readLine()) == null){
-                        System.out.println("Waiting for client to send public key with modulus");
-                    }
-                    System.out.println("Client public key with n: " + clientPublicKeyWithNModulus);
-
-                    String[] parts = clientPublicKeyWithNModulus.split(",");
-                    BigInteger clientPublicKey = new BigInteger(parts[0]);
-                    BigInteger clientN = new BigInteger(parts[1]);
-                    System.out.println("Client public key: " + clientPublicKey.toString());
-                    System.out.println("N_modulus: " + clientN.toString());
-
-                    String encryptedKey = Rsa.encrypt(new BigInteger(key.getBytes()), clientPublicKey, clientN).toString();
-
-                    out.write(encryptedKey + "\n");
-                    out.flush();
-                    System.out.println("Encrypted key: " + encryptedKey);
-
-                     statusArea.appendText("Handshake successfully !!! \n");
                 }
 
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return key;
-        }
+                out.write(fileMetadata.toString() + "\n");
+                out.flush();
 
-        private String encryptFile(File inputFile, BufferedReader in,  BufferedWriter out) throws Exception {
-            String clientPublicKey = performHandShakeProtocol(in, out);
+                while ((clientPublicKeyWithNModulus = in.readLine()) == null) {
+                    System.out.println("Waiting for client to send public key with modulus");
+                }
+                System.out.println("Client public key with n: " + clientPublicKeyWithNModulus);
 
-            if(clientPublicKey == null){
-                System.out.println("Failed to handshake !!!");
-            }
-//            out.println("Start sending file");
+                String[] parts = clientPublicKeyWithNModulus.split(",");
+                BigInteger clientPublicKey = new BigInteger(parts[0]);
+                BigInteger clientN = new BigInteger(parts[1]);
+                System.out.println("Client public key: " + clientPublicKey.toString());
+                System.out.println("N_modulus: " + clientN.toString());
 
-            Des des = new Des();
-            String keyStr = clientPublicKey;
+                String encryptedKey = Rsa.encrypt(new BigInteger(key.getBytes()), clientPublicKey, clientN).toString();
 
-            byte[] keyBytes = keyStr.getBytes();
-            byte[] fileBytes;
+                out.write(encryptedKey + "\n");
+                out.flush();
+                System.out.println("Encrypted key: " + encryptedKey);
 
-            fileBytes = new byte[(int) inputFile.length()];
-            try (FileInputStream fis = new FileInputStream(inputFile)) {
-                fis.read(fileBytes);
+                statusArea.appendText("Handshake successfully !!! \n");
             }
 
-            statusArea.appendText("Start encrypting file: " + inputFile.getName() + "\n");
-            byte[] encryptedBytes = des.encrypt(fileBytes, keyBytes, false);
-            StringBuilder encryptedHex = byteArrayToHexString(encryptedBytes);
-            System.out.println("Encrypted (hex): " + encryptedHex);
-            return encryptedHex.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    private byte[] encryptFile(BufferedReader in, BufferedWriter out, String key) throws Exception {
+
+        Des des = new Des();
+        byte[] keyBytes = key.getBytes();
+        byte[] fileBytes;
+
+        fileBytes = new byte[(int) selectedFile.length()];
+        try (FileInputStream fis = new FileInputStream(selectedFile)) {
+            fis.read(fileBytes);
         }
 
-        private String processFile(BufferedReader in, BufferedWriter out) throws Exception {
-            // metadata
-            List<String> fileNameWithExt = Arrays.stream(selectedFile.getName().split("\\.")).toList();
-            String fileName = fileNameWithExt.get(0);
-            String extension = fileNameWithExt.get(1);
-            FileType fileType = FileType.getTypeFromExtension(extension);
-            Long size = selectedFile.getTotalSpace();
-            String content = encryptFile(selectedFile, in, out);
-            // wrap with file model
-            FileModel fileModel = new FileModel(selectedFile.getName(), extension, size, LocalDateTime.now(),content);
-            return fileModel.toString();
-        }
+        statusArea.appendText("Start encrypting file: " + selectedFile.getName() + "\n");
+        return des.encrypt(fileBytes, keyBytes, false);
+    }
 
-        @Override
-        public void run() {
-                try {
-                Socket clientSocket;
-                clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
-                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                String encryptedData = processFile(in, out);
+    @Override
+    public void run() {
+        try {
+            Socket clientSocket;
+            String key = "Default Message !!!";
+            byte[] encryptedBytes;
+
+            clientSocket = serverSocket.accept();
+            System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
+
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            if (performHandShakeProtocol(in, out, key)) {
+                encryptedBytes = encryptFile(in, out, key);
                 statusArea.appendText("Encrypted file: " + selectedFile.getName() + "\n");
                 statusArea.appendText("Sending file: " + selectedFile.getName() + "\n");
-                    //BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-                    out.write(encryptedData + "\n");
-                    out.flush();
-                    statusArea.appendText("File sent successfully\n");
-                    in.close();
-                    out.close();
-            } catch (Exception e) {
-                statusArea.appendText("Error sending file: " + e.getMessage() + "\n");
+
+                // Send the encrypted file in chunks
+                sendFileInChunks(clientSocket, encryptedBytes);
+
+                out.flush();
+                statusArea.appendText("File sent successfully\n");
             }
+
+            in.close();
+            out.close();
+        } catch (Exception e) {
+            statusArea.appendText("Error sending file: " + e.getMessage() + "\n");
         }
     }
+
+    private void sendFileInChunks(Socket clientSocket, byte[] encryptedBytes) {
+        try (DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
+             DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream())) {
+
+            int totalBytesSent = 0;
+            int retryCount = 0;
+
+            while (totalBytesSent < encryptedBytes.length) {
+                int bytesToSend = Math.min(CHUNK_SIZE, encryptedBytes.length - totalBytesSent);
+                byte[] chunk = new byte[bytesToSend];
+                System.arraycopy(encryptedBytes, totalBytesSent, chunk, 0, bytesToSend);
+
+                boolean chunkAcknowledged = false;
+
+                while (!chunkAcknowledged && retryCount < MAX_RETRIES) {
+                    // Send the chunk
+                    dataOutputStream.write(chunk, 0, bytesToSend);
+                    dataOutputStream.flush();
+                    totalBytesSent += bytesToSend;
+                    System.out.println("Sent " + bytesToSend + " bytes. Total sent: " + totalBytesSent + "\n");
+
+                    // Wait for ACK
+                    try {
+                        clientSocket.setSoTimeout(ACK_TIMEOUT);
+                        String ack = dataInputStream.readUTF();
+                        if ("ACK".equals(ack)) {
+                            System.out.println("Client acked !!!");
+                            chunkAcknowledged = true;
+                            retryCount = 0; // Reset retry count after successful ACK
+                        } else {
+                            statusArea.appendText("Unexpected response: " + ack + "\n");
+                        }
+                    } catch (IOException e) {
+                        statusArea.appendText("Timeout waiting for ACK. Retrying...\n");
+                        retryCount++;
+                    }
+                }
+
+                if (retryCount >= MAX_RETRIES) {
+                    statusArea.appendText("Max retries reached. Aborting file transfer.\n");
+                    return;
+                }
+            }
+
+            statusArea.appendText("File transfer completed successfully.\n");
+
+        } catch (IOException e) {
+            statusArea.appendText("Error during file transfer: " + e.getMessage() + "\n");
+        }
+    }
+}
