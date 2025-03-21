@@ -111,6 +111,7 @@ public class SendFileThread extends Thread {
     public void run() {
         try {
             Socket clientSocket;
+            ///TODO: pass key here
             String key = "Default Message !!!";
             byte[] encryptedBytes;
 
