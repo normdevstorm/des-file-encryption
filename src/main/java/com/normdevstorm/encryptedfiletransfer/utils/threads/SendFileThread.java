@@ -164,8 +164,8 @@ public class SendFileThread extends Thread {
                     try {
                         clientSocket.setSoTimeout(ACK_TIMEOUT);
                         String ack = dataInputStream.readUTF();
-                        if ("ACK".equals(ack)) {
-                            System.out.println("Client acked !!!");
+                        if (ack.startsWith("ACK")) {
+                            System.out.println("Client acked: " + ack + "\n");
                             chunkAcknowledged = true;
                             retryCount = 0; // Reset retry count after successful ACK
                         } else {
@@ -183,7 +183,7 @@ public class SendFileThread extends Thread {
                 }
             }
 
-            statusArea.appendText("File transfer completed successfully.\n");
+            statusArea.appendText("File transfer completed successfully. Total bytes sent: " + totalBytesSent + "\n");
 
         } catch (IOException e) {
             statusArea.appendText("Error during file transfer: " + e.getMessage() + "\n");

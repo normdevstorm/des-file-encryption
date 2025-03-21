@@ -3,6 +3,7 @@ package com.normdevstorm.encryptedfiletransfer.client.controller;
 import com.normdevstorm.encryptedfiletransfer.crypto.Des;
 import com.normdevstorm.encryptedfiletransfer.model.GenericUIController;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
+import com.normdevstorm.encryptedfiletransfer.utils.constant.ConstantManager;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 import com.normdevstorm.encryptedfiletransfer.utils.threads.ReceiveFileThread;
 import javafx.application.Platform;
@@ -28,7 +29,7 @@ public class ClientController extends GenericUIController {
     public void initializeController() {
         try {
             keyModel = new KeyModel();
-            clientSocket = new Socket("localhost", 5000);
+            clientSocket = new Socket(ConstantManager.serverIpAddress, 5000);
              eventHandlers();
         } catch (IOException e) {
             throw new RuntimeException(e);

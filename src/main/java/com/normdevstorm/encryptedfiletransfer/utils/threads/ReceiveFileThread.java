@@ -3,12 +3,15 @@ import com.normdevstorm.encryptedfiletransfer.crypto.Des;
 import com.normdevstorm.encryptedfiletransfer.crypto.Rsa;
 import com.normdevstorm.encryptedfiletransfer.model.FileMetadata;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
+import com.normdevstorm.encryptedfiletransfer.utils.constant.ConstantManager;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
 import javafx.scene.control.TextArea;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static com.normdevstorm.encryptedfiletransfer.crypto.Des.byteArrayToHexString;
 
@@ -90,7 +93,7 @@ public class ReceiveFileThread extends Thread {
         Des des = new Des();
         byte[] keyBytes = key.getBytes();
         byte[] decryptedDataByte = des.encrypt(encryptedByte, keyBytes, true);
-        System.out.println("Decrypt content of file " + fileName + " is :" + new String(decryptedDataByte));
+//        System.out.println("Decrypt content of file " + fileName + " is :" + new String(decryptedDataByte));
         processBasedOnTypeAndSaveFile(fileName, decryptedDataByte);
     }
 
@@ -110,55 +113,61 @@ public class ReceiveFileThread extends Thread {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             byte[] buffer = new byte[CHUNK_SIZE];
-            int bytesRead;
             int totalBytesReceived = 0;
 
-            while (true) {
-                // Read a chunk of data
-                bytesRead = dataInputStream.read(buffer);
-                if (bytesRead == -1) {
-                    break; // End of stream
+            while (totalBytesReceived < fileMetadata.getSize()) {
+                int bytesRead = 0;
+                int remainingBytes = CHUNK_SIZE;
+
+                // Read until the full chunk is received
+                while (remainingBytes > 0) {
+                    int read = dataInputStream.read(buffer, bytesRead, remainingBytes);
+                    if (read == -1) {
+                        break; // End of stream
+                    }
+                    bytesRead += read;
+                    remainingBytes -= read;
                 }
 
-                // Write the chunk to the output stream
-                byteArrayOutputStream.write(buffer, 0, bytesRead);
-                totalBytesReceived += bytesRead;
-                System.out.println("Received " + bytesRead + " bytes. Total received: " + totalBytesReceived + "\n");
-                /// TODO: Demo interrupted sending case
-//                if(totalBytesReceived >= 4000000){
-//                    dataOutputStream.writeUTF("AK");
-//                    Thread.sleep(1000);
-//                }
-                // Send ACK
-                dataOutputStream.writeUTF("ACK");
-                dataOutputStream.flush();
+                if (bytesRead > 0) {
+                    // Write the chunk to the output stream
+                    byteArrayOutputStream.write(buffer, 0, bytesRead);
+                    totalBytesReceived += bytesRead;
+                    System.out.println("Received " + bytesRead + " bytes. Total received: " + totalBytesReceived + "\n");
+
+                    // Send ACK
+                    dataOutputStream.writeUTF("ACK " + totalBytesReceived);
+                    dataOutputStream.flush();
+                }
             }
 
-            statusArea.appendText("File transfer completed successfully.\n");
+            if (fileMetadata.getSize() == totalBytesReceived) {
+                statusArea.appendText("File transfer completed successfully.\n");
+            } else {
+                statusArea.appendText("File transfer incomplete. Expected: " + fileMetadata.getSize() + ", Received: " + totalBytesReceived + "\n");
+            }
+
             return byteArrayOutputStream.toByteArray();
 
         } catch (IOException e) {
             statusArea.appendText("Error during file transfer: " + e.getMessage() + "\n");
             return new byte[0];
         }
-//        catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
     }
-
     @Override
     public void run() {
         try {
             if (clientSocket.isClosed()) {
-                clientSocket = new Socket("localhost", 5000);
+                clientSocket = new Socket(ConstantManager.serverIpAddress, 5000);
             }
+
             String key;
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             key = performHandShakeProtocol(clientSocket, out, in);
 
             byte[] encryptedBytes = receiveFileInChunks();
-            System.out.println("Message received: " + byteArrayToHexString(encryptedBytes));
+//            System.out.println("Message received: " + byteArrayToHexString(encryptedBytes));
             receiveFile(encryptedBytes, key);
 
             in.close();
