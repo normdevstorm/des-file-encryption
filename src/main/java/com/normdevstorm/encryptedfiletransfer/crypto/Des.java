@@ -365,4 +365,35 @@ private byte[] useTable(byte[] arr, int[] table) {
         }
         return hex;
     }
+
+
+
+    //them moi
+
+    // Chuyển đổi chuỗi Hex sang Binary
+    public static String hexToBin(String hex) {
+        StringBuilder binary = new StringBuilder();
+        for (char hexChar : hex.toCharArray()) {
+            int decimal = Integer.parseInt(String.valueOf(hexChar), 16);
+            binary.append(String.format("%4s", Integer.toBinaryString(decimal)).replace(' ', '0'));
+        }
+        return binary.toString();
+    }
+
+    // Giải mã dữ liệu (decrypt)
+    public byte[] decrypt(byte[] cipherText, byte[] key) {
+        return encrypt(cipherText, key, true); // Giải mã bằng cách dùng encrypt với flag decrypt = true
+    }
+
+    // Chuyển đổi Binary sang UTF-8 string
+    public static String binToUTF(String binary) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < binary.length(); i += 8) {
+            String byteString = binary.substring(i, Math.min(i + 8, binary.length()));
+            int charCode = Integer.parseInt(byteString, 2);
+            text.append((char) charCode);
+        }
+        return text.toString();
+    }
+
 }
