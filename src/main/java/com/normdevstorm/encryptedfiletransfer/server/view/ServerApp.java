@@ -29,7 +29,7 @@ public class ServerApp extends Application {
             //Load FXML
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/normdevstorm/encryptedfiletransfer/server.fxml"));
             Parent root = (Parent) fxmlLoader.load();
-            Scene scene = new Scene(root, 400, 500);
+            Scene scene = new Scene(root, 400, 800);
             scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/com/normdevstorm/encryptedfiletransfer/styles.css")).toExternalForm());
             // Add controller
             ServerController serverController = fxmlLoader.getController();

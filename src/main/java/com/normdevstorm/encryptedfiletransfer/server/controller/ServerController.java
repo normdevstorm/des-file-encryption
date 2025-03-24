@@ -13,6 +13,9 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.ArrayList;
+
 
 public class ServerController extends GenericUIController {
 
@@ -74,25 +77,63 @@ public class ServerController extends GenericUIController {
         }
     }
 
+    private final List<Socket> connectedClients = new ArrayList<>();
+
+    private void startServer() {
+        new Thread(() -> {
+            try {
+                ServerSocket messageServerSocket = new ServerSocket(5050);
+                Platform.runLater(() -> statusArea.appendText("Server is running on port 5050...\n"));
+
+                while (true) {
+                    Socket clientSocket = messageServerSocket.accept();
+                    connectedClients.add(clientSocket); // Thêm client vào danh sách
+                    Platform.runLater(() -> statusArea.appendText("Client connected!\n"));
+                }
+            } catch (Exception e) {
+                Platform.runLater(() -> statusArea.appendText("Error: " + e.getMessage() + "\n"));
+            }
+        }).start();
+    }
+
     private void sendEncryptedMessage(String message, String encryptionKey) {
         new Thread(() -> {
-            try (ServerSocket messageServerSocket = new ServerSocket(5050);
-                 Socket clientSocket = messageServerSocket.accept();
-                 OutputStream output = clientSocket.getOutputStream();
-                 PrintWriter writer = new PrintWriter(output, true)) {
+            try {
+                if (message.isEmpty() || encryptionKey.isEmpty()) {
+                    Platform.runLater(() -> statusArea.appendText("Please enter both message and encryption key!\n"));
+                    return;
+                }
+
+                // Đảm bảo khóa có độ dài chính xác cho DES (8 byte)
+                byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
+                if (keyBytes.length < 8) {
+                    Platform.runLater(() -> statusArea.appendText("Error: Encryption key must be at least 8 bytes!\n"));
+                    return;
+                }
 
                 Des des = new Des();
                 byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
-                byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
                 byte[] encryptedBinary = des.encrypt(messageBytes, keyBytes, false);
                 String hexMessage = bytesToHex(encryptedBinary);
-                writer.println(hexMessage);
-                Platform.runLater(() -> statusArea.appendText("Encrypted message (HEX) sent successfully!\n"));
+
+                // Gửi tin nhắn đến tất cả client đã kết nối
+                for (Socket clientSocket : connectedClients) {
+                    if (!clientSocket.isClosed()) { // Kiểm tra kết nối
+                        OutputStream output = clientSocket.getOutputStream();
+                        PrintWriter writer = new PrintWriter(output, true);
+                        writer.println(hexMessage);
+                    }
+                }
+
+                Platform.runLater(() -> statusArea.appendText("Encrypted message sent!\n"));
             } catch (Exception e) {
                 Platform.runLater(() -> statusArea.appendText("Error sending encrypted message: " + e.getMessage() + "\n"));
             }
         }).start();
     }
+
+
+
 
     private String bytesToHex(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
@@ -102,47 +143,35 @@ public class ServerController extends GenericUIController {
         return hexString.toString();
     }
 
-    //Check ketnoi
-    private void startServer() {
-        new Thread(() -> {
-            try (ServerSocket messageServerSocket = new ServerSocket(5050)) {
-                Platform.runLater(() -> statusArea.appendText("Server is running on port 5050...\n"));
 
-                Socket clientSocket = messageServerSocket.accept();
-                Platform.runLater(() -> statusArea.appendText("Client connected!\n"));
-                handleClient(clientSocket);
-
-            } catch (Exception e) {
-                Platform.runLater(() -> statusArea.appendText("Error: " + e.getMessage() + "\n"));
-            }
-        }).start();
-    }
 
     private void handleClient(Socket clientSocket) {
-        try (OutputStream output = clientSocket.getOutputStream();
-             PrintWriter writer = new PrintWriter(output, true)) {
+        try {
+            OutputStream output = clientSocket.getOutputStream();
+            PrintWriter writer = new PrintWriter(output, true);
 
-            String message = messageInput.getText();
-            String encryptionKey = encryptionKeyInput.getText();
+            while (true) { // Giữ kết nối và gửi nhiều tin nhắn
+                String message = messageInput.getText();
+                String encryptionKey = encryptionKeyInput.getText();
 
-            if (message.isEmpty() || encryptionKey.isEmpty()) {
-                Platform.runLater(() -> statusArea.appendText("Please enter both message and encryption key!\n"));
-                return;
+                if (!message.isEmpty() && !encryptionKey.isEmpty()) {
+                    Des des = new Des();
+                    byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
+                    byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
+                    byte[] encryptedBinary = des.encrypt(messageBytes, keyBytes, false);
+
+                    String hexMessage = bytesToHex(encryptedBinary);
+                    writer.println(hexMessage);
+
+                    Platform.runLater(() -> statusArea.appendText("Encrypted message sent!\n"));
+                }
+
+                Thread.sleep(5000); // Gửi tin nhắn sau mỗi 5 giây (hoặc tùy chỉnh)
             }
 
-            Des des = new Des();
-            byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
-            byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
-            byte[] encryptedBinary = des.encrypt(messageBytes, keyBytes, false); // Thêm 'false' hoặc 'true'
-
-            String hexMessage = bytesToHex(encryptedBinary);
-            writer.println(hexMessage);
-
-            Platform.runLater(() -> statusArea.appendText("Encrypted message sent!\n"));
         } catch (Exception e) {
-            Platform.runLater(() -> statusArea.appendText("Error sending encrypted message: " + e.getMessage() + "\n"));
+            Platform.runLater(() -> statusArea.appendText("Client disconnected.\n"));
         }
     }
-
 
 }
