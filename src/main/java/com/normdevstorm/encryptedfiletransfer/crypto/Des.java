@@ -6,6 +6,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Des {
     // DES algorithm tables
@@ -159,8 +162,71 @@ public class Des {
                 subKeys[subKeys.length - 1 - i] = temp;
             }
         }
+        int blockCount = text.length / 8;
+        byte[] result = new byte[text.length];
 
-        return processText(text, subKeys);
+        // Create a thread pool with the number of available processors
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+        // Submit tasks to the executor
+        for (int blocknum = 0; blocknum < blockCount; blocknum++) {
+            final int blockIndex = blocknum;
+            executor.submit(() -> {
+                byte[] block = new byte[8];
+                System.arraycopy(text, blockIndex * 8, block, 0, 8);
+                byte[] encryptedBlock = processBlock(block, subKeys);
+                System.arraycopy(encryptedBlock, 0, result, blockIndex * 8, 8);
+            });
+        }
+
+        // Shutdown the executor and wait for all tasks to complete
+        executor.shutdown();
+        try {
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Encryption interrupted", e);
+        }
+
+        return result;
+    }
+
+
+    private byte[] processBlock(byte[] block, byte[][] subKeys) {
+        // Your existing processText logic for a single block
+        byte[] tmp = new byte[8];
+        System.arraycopy(block, 0, tmp, 0, 8);
+        tmp = useTable(tmp, IP);
+        System.arraycopy(tmp, 0, block, 0, 8);
+
+        byte[] holderL = new byte[4];
+        byte[] holderR = new byte[4];
+
+        System.arraycopy(block, 0, holderL, 0, 4);
+        System.arraycopy(block, 4, holderR, 0, 4);
+
+        for (int stage = 1; stage <= 16; stage++) {
+            byte[] oldR = Arrays.copyOf(holderR, holderR.length);
+            byte[] expandedR = useTable(holderR, E);
+            for (int i = 0; i < expandedR.length; i++) {
+                expandedR[i] ^= subKeys[stage - 1][i];
+            }
+            byte[] sOutput = sbox(expandedR);
+            sOutput = useTable(sOutput, P);
+            for (int i = 0; i < holderL.length; i++) {
+                holderR[i] = (byte) (holderL[i] ^ sOutput[i]);
+            }
+            holderL = oldR;
+
+            if (stage == 16) {
+                System.arraycopy(holderR, 0, block, 0, 4);
+                System.arraycopy(holderL, 0, block, 4, 4);
+                tmp = useTable(block, IP2);
+                System.arraycopy(tmp, 0, block, 0, 8);
+            }
+        }
+
+        return block;
     }
 
     private byte[] processText(byte[] textbytes, byte[][] subkeyarray) {

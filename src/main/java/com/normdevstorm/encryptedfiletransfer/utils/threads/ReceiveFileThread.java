@@ -114,10 +114,12 @@ public class ReceiveFileThread extends Thread {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             byte[] buffer = new byte[CHUNK_SIZE];
             int totalBytesReceived = 0;
+            int defaultRemainingBytes = Math.min(fileMetadata.getSize().intValue(), CHUNK_SIZE);
 
             while (totalBytesReceived < fileMetadata.getSize()) {
+                int remainingBytesOfWholeFile = fileMetadata.getSize().intValue() - totalBytesReceived;
                 int bytesRead = 0;
-                int remainingBytes = CHUNK_SIZE;
+                int remainingBytes = Math.min(remainingBytesOfWholeFile, defaultRemainingBytes);
 
                 // Read until the full chunk is received
                 while (remainingBytes > 0) {

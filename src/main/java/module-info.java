@@ -1,6 +1,7 @@
 module com.normdevstorm.encryptedfiletransfer {
     requires javafx.controls;
     requires javafx.fxml;
+    requires javafx.graphics;
 
     requires org.kordamp.bootstrapfx.core;
     requires java.desktop;

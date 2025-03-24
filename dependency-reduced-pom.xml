@@ -27,7 +27,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.normdevstorm.encryptedfiletransfer.server.view.ServerApp</mainClass>
+                  <mainClass>com.normdevstorm.encryptedfiletransfer.client.view.ClientApp</mainClass>
                 </transformer>
               </transformers>
             </configuration>
@@ -39,10 +39,10 @@
         <artifactId>javafx-maven-plugin</artifactId>
         <version>0.0.8</version>
         <configuration>
-          <mainClass>com.normdevstorm.encryptedfiletransfer.server.view.ServerApp</mainClass>
+          <mainClass>com.normdevstorm.encryptedfiletransfer.client.view.ClientApp</mainClass>
           <launcher>launcher</launcher>
-          <jlinkImageName>app</jlinkImageName>
-          <jlinkZipName>app-zip</jlinkZipName>
+          <jlinkImageName>app-client</jlinkImageName>
+          <jlinkZipName>app-client-zip</jlinkZipName>
         </configuration>
       </plugin>
     </plugins>

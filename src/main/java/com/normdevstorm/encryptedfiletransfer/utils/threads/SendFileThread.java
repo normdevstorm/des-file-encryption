@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 public class SendFileThread extends Thread {
     private static final int CHUNK_SIZE = 8096; // 1 KB chunk size
-    private static final int MAX_RETRIES = 3;
+    private static final int MAX_RETRIES = 6;
     private static final int ACK_TIMEOUT = 5000; // 5 seconds
 
     private File selectedFile;
