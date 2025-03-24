@@ -158,7 +158,7 @@ public class ReceiveFileThread extends Thread {
     public void run() {
         try {
             if (clientSocket.isClosed()) {
-                clientSocket = new Socket(ConstantManager.serverIpAddress, 80);
+                clientSocket = new Socket(ConstantManager.serverIpAddress, 5050);
             }
 
             String key;

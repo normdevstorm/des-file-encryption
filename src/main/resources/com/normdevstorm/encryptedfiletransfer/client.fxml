@@ -21,5 +21,7 @@
         <Button fx:id="decryptBtn" text="Decrypt Message" styleClass="modern-button"/>
 
         <TextArea fx:id="statusArea" editable="false" prefHeight="200"/>
+        <TextArea fx:id="receivedMessageArea" />
+
     </children>
 </VBox>

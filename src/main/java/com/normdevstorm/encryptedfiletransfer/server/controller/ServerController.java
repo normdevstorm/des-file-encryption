@@ -1,74 +1,3 @@
-//package com.normdevstorm.encryptedfiletransfer.server.controller;
-//import com.normdevstorm.encryptedfiletransfer.model.GenericUIController;
-//import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
-//import com.normdevstorm.encryptedfiletransfer.utils.threads.SendFileThread;
-//import javafx.application.Platform;
-//import javafx.fxml.FXML;
-//import javafx.scene.control.*;
-//import javafx.stage.FileChooser;
-//import javafx.stage.Stage;
-//
-//import java.io.*;
-//import java.net.ServerSocket;
-//
-//
-//public class ServerController extends GenericUIController {
-//
-//    @FXML
-//    private Button sendBtn;
-////    @FXML private Button receiveBtn;
-//
-//    private File selectedFile;
-//    private ServerSocket serverSocket;
-//    private Stage stage;
-//
-//
-//    public void initializeController(ServerSocket serverSocket, Stage stage) {
-//        this.serverSocket = serverSocket;
-//        this.stage = stage;
-//        eventHandlers();
-//    }
-//
-//
-//    @Override
-//    public void eventHandlers() {
-//            FileChooser fileChooser = new FileChooser();
-//            selectFileBtn.setOnAction(e -> {
-//                try {
-//                    selectedFile = fileChooser.showOpenDialog(stage);
-//                    if (selectedFile != null) {
-//                        statusArea.appendText("Selected: " + selectedFile.getName() + "\n");
-//                        sendBtn.setDisable(false);
-//                    }
-//                } catch (Exception ex) {
-//                    statusArea.appendText("Error occurred when trying to choosing files !!!");
-//                }
-//            });
-//
-//            sendBtn.setOnAction(e -> {
-//                try {
-//                    sendFile(serverSocket);
-//                } catch (Exception ex) {
-//                    statusArea.appendText("Error sending file: " + selectedFile.getName() + ex.getMessage());
-//                }
-//            });
-//    }
-//
-//    private synchronized void sendFile(ServerSocket serverSocket) {
-//        if (selectedFile != null) {
-//            SendFileThread sendFileThread = new SendFileThread(statusArea, serverSocket);
-//            sendFileThread.setSelectedFile(selectedFile);
-//            sendFileThread.setType(FileType.IMAGE);
-//            Platform.runLater(sendFileThread::start);
-//        } else {
-//            /// TODO: add showDialog here
-//            System.out.println("File is null !!!");
-//        }
-//    }
-//}
-//Tren la code cu nhe
-
-
 package com.normdevstorm.encryptedfiletransfer.server.controller;
 
 import com.normdevstorm.encryptedfiletransfer.crypto.Des;
@@ -80,7 +9,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -104,21 +32,21 @@ public class ServerController extends GenericUIController {
         this.fileServerSocket = fileServerSocket;
         this.stage = stage;
         eventHandlers();
+        startServer();
     }
 
     @Override
     public void eventHandlers() {
         FileChooser fileChooser = new FileChooser();
-
-        sendBtn.setOnAction(e -> {
+        selectFileBtn.setOnAction(e -> {
             try {
                 selectedFile = fileChooser.showOpenDialog(stage);
                 if (selectedFile != null) {
-                    statusArea.appendText("Selected file: " + selectedFile.getName() + "\n");
-                    sendFile(selectedFile);
+                    statusArea.appendText("Selected: " + selectedFile.getName() + "\n");
+                    sendBtn.setDisable(false);
                 }
             } catch (Exception ex) {
-                statusArea.appendText("Error selecting file!\n");
+                statusArea.appendText("Error occurred when trying to choose files!\n");
             }
         });
 
@@ -148,28 +76,18 @@ public class ServerController extends GenericUIController {
 
     private void sendEncryptedMessage(String message, String encryptionKey) {
         new Thread(() -> {
-            try (ServerSocket messageServerSocket = new ServerSocket(5000);
+            try (ServerSocket messageServerSocket = new ServerSocket(5050);
                  Socket clientSocket = messageServerSocket.accept();
                  OutputStream output = clientSocket.getOutputStream();
                  PrintWriter writer = new PrintWriter(output, true)) {
 
                 Des des = new Des();
-
-                // Chuyển message sang byte[]
                 byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
-
-                // Chuyển key sang byte[]
                 byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
-
-                // Mã hóa
                 byte[] encryptedBinary = des.encrypt(messageBytes, keyBytes, false);
-
-                // Chuyển sang HEX để gửi
                 String hexMessage = bytesToHex(encryptedBinary);
-
                 writer.println(hexMessage);
                 Platform.runLater(() -> statusArea.appendText("Encrypted message (HEX) sent successfully!\n"));
-
             } catch (Exception e) {
                 Platform.runLater(() -> statusArea.appendText("Error sending encrypted message: " + e.getMessage() + "\n"));
             }
@@ -183,4 +101,48 @@ public class ServerController extends GenericUIController {
         }
         return hexString.toString();
     }
+
+    //Check ketnoi
+    private void startServer() {
+        new Thread(() -> {
+            try (ServerSocket messageServerSocket = new ServerSocket(5050)) {
+                Platform.runLater(() -> statusArea.appendText("Server is running on port 5050...\n"));
+
+                Socket clientSocket = messageServerSocket.accept();
+                Platform.runLater(() -> statusArea.appendText("Client connected!\n"));
+                handleClient(clientSocket);
+
+            } catch (Exception e) {
+                Platform.runLater(() -> statusArea.appendText("Error: " + e.getMessage() + "\n"));
+            }
+        }).start();
+    }
+
+    private void handleClient(Socket clientSocket) {
+        try (OutputStream output = clientSocket.getOutputStream();
+             PrintWriter writer = new PrintWriter(output, true)) {
+
+            String message = messageInput.getText();
+            String encryptionKey = encryptionKeyInput.getText();
+
+            if (message.isEmpty() || encryptionKey.isEmpty()) {
+                Platform.runLater(() -> statusArea.appendText("Please enter both message and encryption key!\n"));
+                return;
+            }
+
+            Des des = new Des();
+            byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
+            byte[] keyBytes = encryptionKey.getBytes(StandardCharsets.UTF_8);
+            byte[] encryptedBinary = des.encrypt(messageBytes, keyBytes, false); // Thêm 'false' hoặc 'true'
+
+            String hexMessage = bytesToHex(encryptedBinary);
+            writer.println(hexMessage);
+
+            Platform.runLater(() -> statusArea.appendText("Encrypted message sent!\n"));
+        } catch (Exception e) {
+            Platform.runLater(() -> statusArea.appendText("Error sending encrypted message: " + e.getMessage() + "\n"));
+        }
+    }
+
+
 }
