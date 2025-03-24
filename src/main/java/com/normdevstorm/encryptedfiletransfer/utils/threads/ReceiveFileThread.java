@@ -10,10 +10,6 @@ import java.io.*;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
-import static com.normdevstorm.encryptedfiletransfer.crypto.Des.byteArrayToHexString;
 
 public class ReceiveFileThread extends Thread {
     private static final int CHUNK_SIZE = 8096; // 1 KB chunk size
@@ -169,7 +165,6 @@ public class ReceiveFileThread extends Thread {
             key = performHandShakeProtocol(clientSocket, out, in);
 
             byte[] encryptedBytes = receiveFileInChunks();
-//            System.out.println("Message received: " + byteArrayToHexString(encryptedBytes));
             receiveFile(encryptedBytes, key);
 
             in.close();

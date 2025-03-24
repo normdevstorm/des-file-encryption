@@ -5,6 +5,7 @@ import com.normdevstorm.encryptedfiletransfer.model.GenericUIController;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
 import com.normdevstorm.encryptedfiletransfer.utils.constant.ConstantManager;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
+import com.normdevstorm.encryptedfiletransfer.utils.threads.ClientListenerThread;
 import com.normdevstorm.encryptedfiletransfer.utils.threads.ReceiveFileThread;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -29,8 +30,15 @@ public class ClientController extends GenericUIController {
     public void initializeController() {
         try {
             keyModel = new KeyModel();
-            clientSocket = new Socket(ConstantManager.serverIpAddress, 5000);
-             eventHandlers();
+            clientSocket = new Socket(ConstantManager.serverIpAddress, ConstantManager.FILE_TRANSFER_PORT);
+            eventHandlers();
+
+            // Start the signal listener thread
+            ClientListenerThread listenerThread = new ClientListenerThread(statusArea, clientSocket);
+            listenerThread.setDaemon(true);
+            listenerThread.start();
+
+            statusArea.appendText("Connected to server and listening for file transfers\n");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
