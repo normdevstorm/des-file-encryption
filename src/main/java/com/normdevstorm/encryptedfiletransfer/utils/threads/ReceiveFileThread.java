@@ -5,6 +5,8 @@ import com.normdevstorm.encryptedfiletransfer.model.FileMetadata;
 import com.normdevstorm.encryptedfiletransfer.model.KeyModel;
 import com.normdevstorm.encryptedfiletransfer.utils.constant.ConstantManager;
 import com.normdevstorm.encryptedfiletransfer.utils.enums.FileType;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 import javafx.scene.control.TextArea;
 import java.io.*;
 import java.math.BigInteger;
@@ -91,6 +93,11 @@ public class ReceiveFileThread extends Thread {
         byte[] decryptedDataByte = des.encrypt(encryptedByte, keyBytes, true);
 //        System.out.println("Decrypt content of file " + fileName + " is :" + new String(decryptedDataByte));
         processBasedOnTypeAndSaveFile(fileName, decryptedDataByte);
+
+        Platform.runLater(() -> {
+            showResultAlert("File Transfer Complete",
+                    "File successfully received and decrypted: " + fileName);
+        });
     }
 
     private void processBasedOnTypeAndSaveFile(String fileName, byte[] decryptDataByte) {
@@ -152,6 +159,15 @@ public class ReceiveFileThread extends Thread {
             return new byte[0];
         }
     }
+
+    private void showResultAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
     @Override
     public void run() {
         try {
