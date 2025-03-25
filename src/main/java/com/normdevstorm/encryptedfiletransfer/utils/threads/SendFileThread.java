@@ -19,10 +19,12 @@ public class SendFileThread extends Thread {
     private FileType type;
     private final TextArea statusArea;
     private final ServerSocket serverSocket;
+    private final String key;
 
-    public SendFileThread(TextArea statusArea, ServerSocket serverSocket) {
+    public SendFileThread(TextArea statusArea, ServerSocket serverSocket, String key) {
         this.statusArea = statusArea;
         this.serverSocket = serverSocket;
+        this.key = key;
     }
 
     public File getSelectedFile() {
@@ -111,8 +113,6 @@ public class SendFileThread extends Thread {
     public void run() {
         try {
             Socket clientSocket;
-            ///TODO: pass key here
-            String key = "Default Message !!!";
             byte[] encryptedBytes;
 
             clientSocket = serverSocket.accept();

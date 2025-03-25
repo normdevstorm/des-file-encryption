@@ -13,7 +13,7 @@ public class ClientApp extends Application {
 
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/normdevstorm/encryptedfiletransfer/client.fxml"));
         Parent root = (Parent) fxmlLoader.load();
-        Scene scene = new Scene(root, 400, 500);
+        Scene scene = new Scene(root, 400, 600);
         scene.getStylesheets().add(getClass().getResource("/com/normdevstorm/encryptedfiletransfer/styles.css").toExternalForm());
 
         ClientController clientController = fxmlLoader.getController();

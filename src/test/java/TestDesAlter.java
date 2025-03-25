@@ -1,13 +1,14 @@
 import com.normdevstorm.encryptedfiletransfer.crypto.Des;
 
 import static com.normdevstorm.encryptedfiletransfer.crypto.Des.byteArrayToHexString;
+import static com.normdevstorm.encryptedfiletransfer.crypto.Des.hexStringToByteArray;
 
 public class TestDesAlter {
     public static void main(String[] args) {
         try {
             // Create a test key and plaintext
-            String keyStr = "efsewewrwer";
-            String plaintext = "   Hello DESfasjfhkjasfkjahsdfkjhaskjfhkjasdbfnmbksdfkjsdf!    ";
+            String keyStr = "12345678";
+            String plaintext = "Xin chào đây ádjfasdfas";
 
             System.out.println("Original text: " + plaintext);
 
@@ -29,12 +30,13 @@ public class TestDesAlter {
             Des des = new Des();
 
             // Encrypt
-            byte[] encryptedBytes = des.encrypt(plaintextBytes, keyBytes, false);
+            byte[] encryptedBytes = des.encryptText(plaintextBytes, keyBytes, false);
             StringBuilder encryptedHex = byteArrayToHexString(encryptedBytes);
-            System.out.println("Encrypted (hex): " + encryptedHex);
 
             // Decrypt
-            byte[] decryptedBytes = des.encrypt(encryptedBytes, keyBytes, true);
+//            System.out.println("Encrypted Bytes");
+            byte[] byteFromString = hexStringToByteArray(encryptedHex.toString());
+            byte[] decryptedBytes = des.encryptText(byteFromString, keyBytes, true);
             String decryptedText = new String(decryptedBytes);
             System.out.println("Decrypted text: " + decryptedText);
 

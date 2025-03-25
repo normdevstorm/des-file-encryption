@@ -1,16 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
 
 <VBox fx:id="layout" spacing="20" styleClass="container" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.normdevstorm.encryptedfiletransfer.server.controller.ServerController">
+    <padding>
+        <Insets top="25" right="25" bottom="25" left="25"/>
+    </padding>
     <children>
+        <!-- Title -->
         <Label fx:id="titleLabel" text="File Encrypt &amp; Transfer" styleClass="title-label"/>
-        <Button fx:id="selectFileBtn" text="Choose File" styleClass="modern-button"/>
-        <Button fx:id="sendBtn" text="Send Encrypted File" styleClass="modern-button" disable="true"/>
-<!--        <Button fx:id="receiveBtn" text="Receive &amp; Decrypt" styleClass="modern-button"/>-->
-        <TextArea fx:id="statusArea" editable="false" prefHeight="200"/>
+
+        <!-- File Transfer Section -->
+<!--        <Label text="File Transfer" styleClass="section-label"/>-->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Button fx:id="selectFileBtn" text="Choose File" styleClass="modern-button"/>
+            <Button fx:id="sendBtn" text="Send Encrypted File" styleClass="modern-button" disable="true"/>
+        </HBox>
+
+        <!-- Status Area -->
+        <Label text="Status Log" styleClass="section-label"/>
+        <TextArea fx:id="statusArea" editable="false" prefHeight="150" styleClass="text-area" wrapText="true"/>
+
+        <!-- Message Encryption Section -->
+        <Label text="Message Encryption" styleClass="section-label" />
+        <GridPane hgap="10" vgap="10">
+            <TextArea fx:id="messageInput" promptText="Enter message to send" styleClass="text-area" wrapText="true" prefHeight="250" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
+            <TextField fx:id="encryptionKeyInput" promptText="Enter encryption key" styleClass="text-area" prefHeight="30" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Button fx:id="sendTextBtn" text="Send Encrypted Message" styleClass="modern-button" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
     </children>
 </VBox>

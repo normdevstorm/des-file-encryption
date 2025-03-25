@@ -131,17 +131,6 @@ public class Des {
             }
     };
 
-    public static byte[] convertImageToBytes(BufferedImage image) throws IOException, IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "png", baos);
-        return baos.toByteArray();
-    }
-
-    public static BufferedImage convertBytesToImage(byte[] bytes) throws IOException {
-        BufferedImage img = ImageIO.read(new ByteArrayInputStream(bytes));
-        return img;
-    }
-
     public static byte[] hexStringToByteArray(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];
@@ -229,6 +218,20 @@ public class Des {
         return block;
     }
 
+    public byte[] encryptText(byte[] text, byte[] keyMaterial, boolean decrypt) {
+        byte[][] subKeys = generateSubkeys(keyMaterial);
+        if (decrypt) {
+            // Reverse the order of subkeys for decryption
+            for (int i = 0; i < subKeys.length / 2; i++) {
+                byte[] temp = subKeys[i];
+                subKeys[i] = subKeys[subKeys.length - 1 - i];
+                subKeys[subKeys.length - 1 - i] = temp;
+            }
+        }
+
+        return processText(text, subKeys);
+    }
+
     private byte[] processText(byte[] textbytes, byte[][] subkeyarray) {
         int blockCount = textbytes.length / 8;
         byte[] tmp = new byte[8];
@@ -290,6 +293,7 @@ public class Des {
 
         return textbytes;
     }
+
 private byte[] useTable(byte[] arr, int[] table) {
         int len = table.length;
         int byteNum = (len - 1) / 8 + 1;
