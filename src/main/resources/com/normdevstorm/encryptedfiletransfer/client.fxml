@@ -6,22 +6,30 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
 
-<VBox fx:id="layout" spacing="15" styleClass="container" prefWidth="400" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.normdevstorm.encryptedfiletransfer.client.controller.ClientController">
+<VBox fx:id="layout" spacing="15" styleClass="container" prefWidth="400" xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.normdevstorm.encryptedfiletransfer.client.controller.ClientController">
     <padding>
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
-        <!-- Title -->
-        <Label fx:id="titleLabel" text="File Encrypt &amp; Transfer" styleClass="title-label" alignment="CENTER"/>
+    <!-- Title -->
+    <Label fx:id="titleLabel" text="File Encrypt &amp; Transfer" styleClass="title-label" alignment="CENTER"/>
 
-        <!-- File Transfer Status Section -->
+    <!-- File Transfer Status Section -->
+    <VBox spacing="20">
+
         <Label text="File Transfer Status" styleClass="section-label" alignment="BASELINE_LEFT"/>
-        <TextArea fx:id="statusArea" editable="false" prefHeight="200" wrapText="true" promptText="Status updates will appear here..."/>
+        <TextArea fx:id="statusArea" editable="false" prefHeight="200" wrapText="true"
+                  promptText="Status updates will appear here..."/>
 
         <!-- Message Status Section -->
         <Label text="Message Status" styleClass="section-label" alignment="BASELINE_LEFT"/>
-        <TextArea fx:id="receivedMessageArea" editable="false" prefHeight="250" wrapText="true" promptText="Received messages..."/>
+        <TextArea fx:id="receivedMessageArea" editable="false" prefHeight="250" wrapText="true"
+                  promptText="Received messages..."/>
 
         <!-- Button Container -->
         <HBox spacing="10" alignment="CENTER">
         </HBox>
+    </VBox>
+
 </VBox>

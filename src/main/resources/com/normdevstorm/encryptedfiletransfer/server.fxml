@@ -8,7 +8,9 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.GridPane?>
 
-<VBox fx:id="layout" spacing="20" styleClass="container" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.normdevstorm.encryptedfiletransfer.server.controller.ServerController">
+<VBox fx:id="layout" spacing="20" styleClass="container" xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.normdevstorm.encryptedfiletransfer.server.controller.ServerController">
     <padding>
         <Insets top="25" right="25" bottom="25" left="25"/>
     </padding>
@@ -17,10 +19,13 @@
         <Label fx:id="titleLabel" text="File Encrypt &amp; Transfer" styleClass="title-label"/>
 
         <!-- File Transfer Section -->
-<!--        <Label text="File Transfer" styleClass="section-label"/>-->
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <Button fx:id="selectFileBtn" text="Choose File" styleClass="modern-button"/>
-            <Button fx:id="sendBtn" text="Send Encrypted File" styleClass="modern-button" disable="true"/>
+        <!--        <Label text="File Transfer" styleClass="section-label"/>-->
+        <!--        <HBox spacing="10" alignment="CENTER_LEFT">-->
+        <HBox spacing="20" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.columnSpan="2">
+            <Button fx:id="selectFileBtn" text="Choose File" styleClass="modern-button" prefWidth="205"
+                    prefHeight="45"/>
+            <Button fx:id="sendBtn" text="Send Encrypted File" styleClass="modern-button" disable="true" prefWidth="205"
+                    prefHeight="45"/>
         </HBox>
 
         <!-- Status Area -->
@@ -28,11 +33,21 @@
         <TextArea fx:id="statusArea" editable="false" prefHeight="150" styleClass="text-area" wrapText="true"/>
 
         <!-- Message Encryption Section -->
-        <Label text="Message Encryption" styleClass="section-label" />
+        <Label text="Message Encryption" styleClass="section-label"/>
         <GridPane hgap="10" vgap="10">
-            <TextArea fx:id="messageInput" promptText="Enter message to send" styleClass="text-area" wrapText="true" prefHeight="250" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"/>
-            <TextField fx:id="encryptionKeyInput" promptText="Enter encryption key" styleClass="text-area" prefHeight="30" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-            <Button fx:id="sendTextBtn" text="Send Encrypted Message" styleClass="modern-button" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+            <VBox spacing="20">
+                <TextArea fx:id="messageInput" promptText="Enter message to send" styleClass="text-area" wrapText="true"
+                          prefHeight="250" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2"
+                />
+                <HBox spacing="20" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.columnSpan="2">
+                    <TextField fx:id="encryptionKeyInput" promptText=" Enter encryption key" styleClass="text-area"
+                               prefWidth="165"
+                               prefHeight="45" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Button fx:id="sendTextBtn" text="Send Encrypted Message" styleClass="modern-button"
+                            GridPane.columnIndex="1" prefHeight="45" GridPane.rowIndex="1"/>
+                </HBox>
+            </VBox>
         </GridPane>
     </children>
 </VBox>
