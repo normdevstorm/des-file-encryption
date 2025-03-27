@@ -1,6 +1,7 @@
 package com.normdevstorm.encryptedfiletransfer.server.view;
 
 import com.normdevstorm.encryptedfiletransfer.server.controller.ServerController;
+import com.normdevstorm.encryptedfiletransfer.utils.constant.ConstantManager;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -15,8 +16,7 @@ public class ServerApp extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
-        ServerSocket serverSocket = new ServerSocket(5000);
-        /// TODO: add the noti dialog here
+        ServerSocket serverSocket = new ServerSocket(ConstantManager.FILE_TRANSFER_PORT);
         //Load FXML
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/normdevstorm/encryptedfiletransfer/server.fxml"));
         Parent root = (Parent) fxmlLoader.load();

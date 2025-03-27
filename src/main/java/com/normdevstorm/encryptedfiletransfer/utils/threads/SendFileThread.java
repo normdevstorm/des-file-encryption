@@ -63,27 +63,26 @@ public class SendFileThread extends Thread {
                         System.out.println("Waiting for client to confirm");
                     }
                 }
-
+                // Send file metadata
                 out.write(fileMetadata.toString() + "\n");
                 out.flush();
-
+                // Receive client Public key along with modulus
                 while ((clientPublicKeyWithNModulus = in.readLine()) == null) {
                     System.out.println("Waiting for client to send public key with modulus");
                 }
                 System.out.println("Client public key with n: " + clientPublicKeyWithNModulus);
-
+                // Extract Public Key and N modulus from client
                 String[] parts = clientPublicKeyWithNModulus.split(",");
                 BigInteger clientPublicKey = new BigInteger(parts[0]);
                 BigInteger clientN = new BigInteger(parts[1]);
                 System.out.println("Client public key: " + clientPublicKey.toString());
                 System.out.println("N_modulus: " + clientN.toString());
-
+                // Use client Public Key to encrypt DES key
                 String encryptedKey = Rsa.encrypt(new BigInteger(key.getBytes()), clientPublicKey, clientN).toString();
-
+                // Send encrypted DES key to client
                 out.write(encryptedKey + "\n");
                 out.flush();
                 System.out.println("Encrypted key: " + encryptedKey);
-
                 statusArea.appendText("Handshake successfully !!! \n");
             }
 
@@ -123,6 +122,13 @@ public class SendFileThread extends Thread {
 
             if (performHandShakeProtocol(in, out, key)) {
                 encryptedBytes = encryptFile(in, out, key);
+/// TODO: enable this code snippet for demo
+//                File encryptedFile = new File("encrypted_file.txt");
+//
+//                try(FileOutputStream fos = new FileOutputStream(encryptedFile)){
+//                    fos.write(encryptedBytes);
+//                }
+
                 statusArea.appendText("Encrypted file: " + selectedFile.getName() + "\n");
                 statusArea.appendText("Sending file: " + selectedFile.getName() + "\n");
 

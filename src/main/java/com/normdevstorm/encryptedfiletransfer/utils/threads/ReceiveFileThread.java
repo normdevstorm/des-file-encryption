@@ -57,6 +57,7 @@ public class ReceiveFileThread extends Thread {
             out.write("Yes\n");
             out.flush();
 
+            // Get file metadata
             while ((fileMetaString = in.readLine()) == null) {
                 System.out.println("Waiting for server sending metadata");
             }
@@ -66,20 +67,21 @@ public class ReceiveFileThread extends Thread {
             fileMetadata.setTime_sent(receivedFileMetadata.getTime_sent());
             System.out.println(fileMetadata);
 
+            // Send client Public Key and N modulus
             out.write(publicKey + "," + n + "\n");
             out.flush();
 
+            // Receive and decrypted DES key using Client Private Key
             while ((encryptedKey = in.readLine()) == null) {
                 System.out.println("Wait for server encrypted key");
             }
-
             String decryptedKey = new String(Rsa.decrypt(new BigInteger(encryptedKey), keyPairs.get("private_key"), keyPairs.get("n_modulus")).toByteArray());
             System.out.println("Decrypted key: " + decryptedKey);
 
             statusArea.appendText("Received and decrypted key from server\n");
             statusArea.appendText("Handshake successfully !!! \n");
-
             return decryptedKey;
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -63,10 +63,7 @@ public class ClientListenerThread extends Thread {
                                     // to prevent blocking the UI thread
                                     new Thread(() -> {
                                         try {
-//                                            Socket fileSocket = new Socket(ConstantManager.serverIpAddress,
-//                                                    ConstantManager.FILE_TRANSFER_PORT);
                                             Des des = new Des();
-//                                            statusArea.appendText("Starting file download...\n");
                                             ReceiveFileThread receiveFileThread = new ReceiveFileThread(
                                                     FileType.IMAGE, statusArea, des, fileSocket);
                                             receiveFileThread.start();

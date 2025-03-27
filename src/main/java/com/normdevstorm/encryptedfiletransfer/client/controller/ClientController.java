@@ -56,8 +56,8 @@ public class ClientController extends GenericUIController {
     private void receiveEncryptedMessage() {
         boolean isConnected = false; // Biến kiểm tra trạng thái kết nối
         while (true) {
-            try (Socket socket = new Socket(ConstantManager.serverIpAddress, ConstantManager.MESSAGING_PORT); BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
+            try (Socket socket = new Socket(ConstantManager.serverIpAddress, ConstantManager.MESSAGING_PORT);
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                 if (!isConnected) { // Chỉ in khi lần đầu kết nối thành công
                     isConnected = true;
                     Platform.runLater(() -> receivedMessageArea.appendText("Connected to server!\n"));
@@ -135,11 +135,11 @@ public class ClientController extends GenericUIController {
     private void decryptMessage(String encryptedData, String decryptionKey) {
         try {
             Des des = new Des();
-            System.out.println("Encrypted data: " + encryptedData);
-            System.out.println("Key: " + decryptionKey);
             byte[] encryptedBytes = Des.hexStringToByteArray(encryptedData);
+            System.out.println("Encrypted data: " + new String(encryptedBytes));
+            System.out.println("Key: " + decryptionKey);
             byte[] keyBytes = decryptionKey.getBytes();
-            byte[] decryptedBytes = des.encryptText(encryptedBytes, keyBytes, true);
+            byte[] decryptedBytes = des.encrypt(encryptedBytes, keyBytes, true);
             String decryptedMessage = new String(decryptedBytes);
             System.out.println(decryptedMessage);
             Platform.runLater(() -> receivedMessageArea.appendText("Decrypted Message: " + decryptedMessage + "\n"));
