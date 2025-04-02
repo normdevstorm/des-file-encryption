@@ -11,6 +11,7 @@ import javafx.scene.control.TextArea;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public class ReceiveFileThread extends Thread {
@@ -92,7 +93,9 @@ public class ReceiveFileThread extends Thread {
         statusArea.appendText("Decrypting file: " + fileName + "\n");
         Des des = new Des();
         byte[] keyBytes = key.getBytes();
+        statusArea.appendText("Started decrypting " + fileName + " at " + LocalDateTime.now());
         byte[] decryptedDataByte = des.encrypt(encryptedByte, keyBytes, true);
+        statusArea.appendText("Finished decrypting " + fileName + " at " + LocalDateTime.now());
 //        System.out.println("Decrypt content of file " + fileName + " is :" + new String(decryptedDataByte));
         processBasedOnTypeAndSaveFile(fileName, decryptedDataByte);
 

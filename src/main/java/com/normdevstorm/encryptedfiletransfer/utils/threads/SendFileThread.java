@@ -104,8 +104,11 @@ public class SendFileThread extends Thread {
             fis.read(fileBytes);
         }
 
-        statusArea.appendText("Start encrypting file: " + selectedFile.getName() + "\n");
-        return des.encrypt(fileBytes, keyBytes, false);
+        statusArea.appendText("Started encrypting file: " + selectedFile.getName() + " at " + LocalDateTime.now() + "\n");
+        byte[] result = des.encrypt(fileBytes, keyBytes, false);
+        statusArea.appendText("Finished encrypting file: " + selectedFile.getName() + " at " + LocalDateTime.now() + "\n");
+
+        return result;
     }
 
     @Override
