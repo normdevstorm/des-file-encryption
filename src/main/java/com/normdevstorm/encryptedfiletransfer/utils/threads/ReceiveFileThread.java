@@ -119,12 +119,13 @@ public class ReceiveFileThread extends Thread {
              DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream())) {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            int paddedFileLength = (fileMetadata.getSize().intValue() + 7)/8 * 8;
             byte[] buffer = new byte[CHUNK_SIZE];
             int totalBytesReceived = 0;
-            int defaultRemainingBytes = Math.min(fileMetadata.getSize().intValue(), CHUNK_SIZE);
+            int defaultRemainingBytes = Math.min(paddedFileLength, CHUNK_SIZE);
 
-            while (totalBytesReceived < fileMetadata.getSize()) {
-                int remainingBytesOfWholeFile = fileMetadata.getSize().intValue() - totalBytesReceived;
+            while (totalBytesReceived < paddedFileLength ) {
+                int remainingBytesOfWholeFile = paddedFileLength - totalBytesReceived;
                 int bytesRead = 0;
                 int remainingBytes = Math.min(remainingBytesOfWholeFile, defaultRemainingBytes);
 
@@ -150,10 +151,10 @@ public class ReceiveFileThread extends Thread {
                 }
             }
 
-            if (fileMetadata.getSize() == totalBytesReceived) {
+            if (paddedFileLength == totalBytesReceived) {
                 statusArea.appendText("File transfer completed successfully.\n");
             } else {
-                statusArea.appendText("File transfer incomplete. Expected: " + fileMetadata.getSize() + ", Received: " + totalBytesReceived + "\n");
+                statusArea.appendText("File transfer incomplete. Expected: " + paddedFileLength + ", Received: " + totalBytesReceived + "\n");
             }
 
             return byteArrayOutputStream.toByteArray();
