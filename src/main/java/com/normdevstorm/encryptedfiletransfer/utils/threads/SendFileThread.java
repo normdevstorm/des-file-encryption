@@ -125,8 +125,8 @@ public class SendFileThread extends Thread {
 
             if (performHandShakeProtocol(in, out, key)) {
                 encryptedBytes = encryptFile(in, out, key);
-/// TODO: enable this code snippet for demo
-//                File encryptedFile = new File("encrypted_file.txt");
+            /// TODO: enable this code snippet for demo
+//                File encryptedFile = new File("encrypted/encrypted_file.txt");
 //
 //                try(FileOutputStream fos = new FileOutputStream(encryptedFile)){
 //                    fos.write(encryptedBytes);

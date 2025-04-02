@@ -96,7 +96,6 @@ public class ReceiveFileThread extends Thread {
         statusArea.appendText("Started decrypting " + fileName + " at " + LocalDateTime.now());
         byte[] decryptedDataByte = des.encrypt(encryptedByte, keyBytes, true);
         statusArea.appendText("Finished decrypting " + fileName + " at " + LocalDateTime.now());
-//        System.out.println("Decrypt content of file " + fileName + " is :" + new String(decryptedDataByte));
         processBasedOnTypeAndSaveFile(fileName, decryptedDataByte);
 
         Platform.runLater(() -> {
