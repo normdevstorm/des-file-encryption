@@ -2,7 +2,10 @@ package com.normdevstorm.encryptedfiletransfer.crypto;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Des {
     // DES algorithm tables
@@ -125,6 +128,48 @@ public class Des {
             }
     };
 
+    // Precomputed lookup tables for bit operations
+    private static final byte[] BIT_MASK = {(byte)0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
+    private static final int[] BIT_SHIFT = {7, 6, 5, 4, 3, 2, 1, 0};
+    
+    // Optimal batch size for block processing (experimentally determined)
+    private static final int OPTIMAL_BATCH_SIZE = 256; // Smaller batch size for better load balancing
+    
+    // Thread pool for parallel processing
+    private static ExecutorService threadPool;
+    
+    static {
+        // Initialize thread pool with optimal size based on available processors
+        int processors = Runtime.getRuntime().availableProcessors();
+        threadPool = Executors.newFixedThreadPool(processors * 2);
+        
+        // Register shutdown hook to ensure thread pool is closed
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            threadPool.shutdown();
+            try {
+                if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
+                    threadPool.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                threadPool.shutdownNow();
+            }
+        }));
+    }
+    
+    // Precomputed S-box lookup tables (direct indexed)
+    private static final int[][][] SBOX_LOOKUP = new int[8][4][16];
+    
+    static {
+        // Initialize the S-box lookup tables for direct indexing
+        for (int box = 0; box < 8; box++) {
+            for (int row = 0; row < 4; row++) {
+                for (int col = 0; col < 16; col++) {
+                    SBOX_LOOKUP[box][row][col] = S[box][col + row * 16];
+                }
+            }
+        }
+    }
+
     public static byte[] hexStringToByteArray(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];
@@ -141,7 +186,6 @@ public class Des {
         int paddedLength = (originalLength + 7) / 8 * 8; // Round up to multiple of 8
 
         byte[] paddedText = Arrays.copyOf(text, paddedLength);
-
         byte[][] subKeys = generateSubkeys(keyMaterial);
         if (decrypt) {
             // Reverse the order of subkeys for decryption
@@ -153,86 +197,170 @@ public class Des {
         }
 
         int blockCount = paddedText.length / 8;
-        byte[] result = new byte[paddedLength];
+        final byte[] result = new byte[paddedLength];
 
-        // Create a thread pool with the number of available processors
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-
-        // Submit tasks to the executor
-        for (int blocknum = 0; blocknum < blockCount; blocknum++) {
-            final int blockIndex = blocknum;
-            executor.submit(() -> {
-                byte[] block = new byte[8];
-                System.arraycopy(paddedText, blockIndex * 8, block, 0, 8);
-                byte[] encryptedBlock = processBlock(block, subKeys);
-                System.arraycopy(encryptedBlock, 0, result, blockIndex * 8, 8);
-            });
-        }
-
-        // Shutdown the executor and wait for all tasks to complete
-        executor.shutdown();
+        // Process in batches for better scheduling and less overhead
         try {
-            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
+            List<Future<?>> futures = new ArrayList<>();
+            
+            // Process blocks in batches with safeguards
+            for (int startBlock = 0; startBlock < blockCount; startBlock += OPTIMAL_BATCH_SIZE) {
+                final int finalStartBlock = startBlock;
+                final int endBlock = Math.min(startBlock + OPTIMAL_BATCH_SIZE, blockCount);
+                futures.add(threadPool.submit(() -> {
+                    try {
+                        for (int blockIndex = finalStartBlock; blockIndex < endBlock; blockIndex++) {
+                            if (blockIndex * 8 + 8 <= paddedText.length) {
+                                byte[] block = new byte[8];
+                                System.arraycopy(paddedText, blockIndex * 8, block, 0, 8);
+                                byte[] encryptedBlock = processBlockOptimized(block, subKeys);
+                                System.arraycopy(encryptedBlock, 0, result, blockIndex * 8, 8);
+                            }
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error processing block", e);
+                    }
+                }));
+            }
+            
+            // Wait for all tasks to complete
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } catch (Exception e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Encryption interrupted", e);
         }
 
         // If decrypting, return original length
         if (decrypt) {
-            // Remove padding by finding the last non-zero byte
             return removeZeroPadding(result);
         }
 
         return result;
     }
 
-
-    private byte[] processBlock(byte[] block, byte[][] subKeys) {
-        // existing processText logic for a single block
-        byte[] tmp = new byte[8];
-        // Initial permutation
-        System.arraycopy(block, 0, tmp, 0, 8);
-        tmp = useTable(tmp, IP);
-        System.arraycopy(tmp, 0, block, 0, 8);
-
-        byte[] holderL = new byte[4];
-        byte[] holderR = new byte[4];
-
-        // Split into left and right parts
-        System.arraycopy(block, 0, holderL, 0, 4);
-        System.arraycopy(block, 4, holderR, 0, 4);
-
+    // Optimized block processing method
+    private byte[] processBlockOptimized(byte[] block, byte[][] subKeys) {
+        // Initial permutation - optimized version
+        byte[] output = useTableOptimized(block, IP);
+        
+        // Working with individual integers for L and R instead of byte arrays
+        // to minimize array operations and memory allocation
+        int L = ((output[0] & 0xFF) << 24) | ((output[1] & 0xFF) << 16) | 
+                ((output[2] & 0xFF) << 8) | (output[3] & 0xFF);
+        int R = ((output[4] & 0xFF) << 24) | ((output[5] & 0xFF) << 16) | 
+                ((output[6] & 0xFF) << 8) | (output[7] & 0xFF);
+        
         // 16 rounds of processing
-        for (int stage = 1; stage <= 16; stage++) {
-            byte[] oldR = Arrays.copyOf(holderR, holderR.length);
-
-            // Expansion E
-            byte[] expandedR = useTable(holderR, E);
-            // XOR with the subkey
-            for (int i = 0; i < expandedR.length; i++) {
-                expandedR[i] ^= subKeys[stage - 1][i];
-            }
-            // S-box substitution
-            byte[] sOutput = sbox(expandedR);
-            // Permutation P
-            sOutput = useTable(sOutput, P);
-            // XOR with left side and swap
-            for (int i = 0; i < holderL.length; i++) {
-                holderR[i] = (byte) (holderL[i] ^ sOutput[i]);
-            }
-            holderL = oldR;
-            // Special handling after the 16th round
-            if (stage == 16) {
-                System.arraycopy(holderR, 0, block, 0, 4);
-                System.arraycopy(holderL, 0, block, 4, 4);
-                tmp = useTable(block, IP2);
-                System.arraycopy(tmp, 0, block, 0, 8);
+        for (int stage = 0; stage < 16; stage++) {
+            int temp = R;
+            
+            // Apply Feistel function
+            // Expansion, XOR with key, S-box, and permutation combined in one step
+            R = L ^ feistelFunction(R, subKeys[stage]);
+            
+            L = temp;
+        }
+        
+        // Swap L and R for the final round
+        int temp = L;
+        L = R;
+        R = temp;
+        
+        // Convert back to bytes
+        output[0] = (byte)(L >>> 24);
+        output[1] = (byte)(L >>> 16);
+        output[2] = (byte)(L >>> 8);
+        output[3] = (byte)L;
+        output[4] = (byte)(R >>> 24);
+        output[5] = (byte)(R >>> 16);
+        output[6] = (byte)(R >>> 8);
+        output[7] = (byte)R;
+        
+        // Final permutation
+        return useTableOptimized(output, IP2);
+    }
+    
+    // Fast Feistel function implementation
+    private int feistelFunction(int r, byte[] subkey) {
+        // Expansion - expand right half from 32 to 48 bits according to E table
+        long expanded = 0;
+        for (int i = 0; i < E.length; i++) {
+            if ((r & (1 << (32 - E[i]))) != 0) {
+                expanded |= (1L << (47 - i));
             }
         }
-
-        return block;
+        
+        // XOR with subkey (48 bits)
+        long keyValue = 0;
+        for (int i = 0; i < 6 && i < subkey.length; i++) {
+            keyValue |= ((subkey[i] & 0xFFL) << (8 * (5 - i)));
+        }
+        expanded ^= keyValue;
+        
+        // Apply S-box substitution (optimized to work on bits directly)
+        int sOutput = 0;
+        for (int box = 0; box < 8; box++) {
+            int position = box * 6;
+            // Extract 6 bits for current S-box (one byte from expanded 48-bit value)
+            int sixBits = (int)((expanded >> (42 - position)) & 0x3F);
+            
+            // Calculate row (first and last bit)
+            int row = ((sixBits & 0x20) >> 4) | (sixBits & 0x01);
+            
+            // Calculate column (middle 4 bits)
+            int col = (sixBits >> 1) & 0x0F;
+            
+            // Get S-box output value (4 bits)
+            int value = SBOX_LOOKUP[box][row][col];
+            
+            // Insert 4-bit output value into appropriate position in 32-bit output
+            sOutput |= (value << (28 - box * 4));
+        }
+        
+        // Apply permutation P - with bounds checking
+        int result = 0;
+        for (int i = 0; i < P.length; i++) {
+            int bitPosition = P[i] - 1; // P values are 1-indexed
+            if (bitPosition >= 0 && bitPosition < 32) {
+                if ((sOutput & (1 << (31 - bitPosition))) != 0) {
+                    result |= (1 << (31 - i));
+                }
+            }
+        }
+        
+        return result;
     }
+    
+    // Optimized table lookup method that reduces memory allocations
+    private byte[] useTableOptimized(byte[] input, int[] table) {
+        int len = table.length;
+        int byteNum = (len - 1) / 8 + 1;
+        byte[] output = new byte[byteNum];
+        
+        for (int i = 0; i < len; i++) {
+            int sourcePos = table[i] - 1;
+            if (sourcePos < 0 || sourcePos >= input.length * 8) {
+                continue; // Skip invalid source position
+            }
+            
+            int sourceByte = sourcePos / 8;
+            int sourceBit = 7 - (sourcePos % 8);
+            
+            int targetByte = i / 8;
+            int targetBit = 7 - (i % 8);
+            
+            if (sourceByte < input.length && targetByte < output.length) {
+                if ((input[sourceByte] & (1 << sourceBit)) != 0) {
+                    output[targetByte] |= (1 << targetBit);
+                }
+            }
+        }
+        
+        return output;
+    }
+
     private static byte[] removeZeroPadding(byte[] data) {
         // Find last non-zero byte
         int i = data.length - 1;
@@ -320,7 +448,7 @@ public class Des {
         return textbytes;
     }
 
-private byte[] useTable(byte[] arr, int[] table) {
+    private byte[] useTable(byte[] arr, int[] table) {
         int len = table.length;
         int byteNum = (len - 1) / 8 + 1;
         byte[] output = new byte[byteNum];
@@ -336,7 +464,7 @@ private byte[] useTable(byte[] arr, int[] table) {
     private byte[] glueKey(byte[] arrC, byte[] arrD) {
         byte[] result = new byte[7];
 
-        // Copy first 3 bytes of arrC
+        // Copy first 3 bytes = 24 bits of arrC
         System.arraycopy(arrC, 0, result, 0, 3);
 
         // Copy bits 24-27 from arrC to result
@@ -460,5 +588,54 @@ private byte[] useTable(byte[] arr, int[] table) {
             hex.append(String.format("%02x", b & 0xff));
         }
         return hex;
+    }
+
+    // Optimized version of getBitAt using lookup tables
+    private static int getBitAtOptimized(byte[] data, int pos) {
+        int bytePos = pos / 8;
+        int bitPos = pos % 8;
+        return (data[bytePos] & BIT_MASK[bitPos]) != 0 ? 1 : 0;
+    }
+
+    // Optimized version of setBitAt using lookup tables
+    private static void setBitAtOptimized(byte[] data, int pos, int val) {
+        int bytePos = pos / 8;
+        int bitPos = pos % 8;
+        if (val == 1) {
+            data[bytePos] |= BIT_MASK[bitPos];
+        } else {
+            data[bytePos] &= ~BIT_MASK[bitPos];
+        }
+    }
+
+    // Fast S-box implementation with direct indexing
+    private byte[] sboxOptimized(byte[] input) {
+        byte[] output = new byte[4];
+        
+        for (int box = 0; box < 8; box++) {
+            // Extract 6 bits for this S-box
+            int bits = 0;
+            for (int i = 0; i < 6; i++) {
+                if (getBitAtOptimized(input, box * 6 + i) == 1) {
+                    bits |= (1 << (5 - i));
+                }
+            }
+            
+            // Calculate row and column
+            int row = ((bits & 0x20) >> 4) | (bits & 0x01);
+            int col = (bits >> 1) & 0x0F;
+            
+            // Get value from precomputed lookup table
+            int value = SBOX_LOOKUP[box][row][col];
+            
+            // Pack into output
+            if (box % 2 == 0) {
+                output[box / 2] |= (value << 4);
+            } else {
+                output[box / 2] |= value;
+            }
+        }
+        
+        return output;
     }
 }

@@ -126,7 +126,7 @@ public class ServerController extends GenericUIController {
                         TextInputDialog keyDialog = new TextInputDialog();
                         keyDialog.setTitle("Encryption Key");
                         keyDialog.setHeaderText("Enter encryption key");
-                        keyDialog.setContentText("Key (minimum 8 characters):");
+                        keyDialog.setContentText("Key (8 characters):");
 
                         keyDialog.showAndWait().ifPresent(this::getKeyFromServer
                         );

@@ -116,16 +116,16 @@ public class ClientController extends GenericUIController {
     private void requestDecryptionKey(String encryptedData) {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Enter Decryption Key");
-        dialog.setHeaderText("Enter the decryption key with the minimum length of 8 characters:");
+        dialog.setHeaderText("Enter the decryption key with the length of 8 characters:");
         dialog.setContentText("Key:");
 
         Optional<String> keyInput = dialog.showAndWait();
         keyInput.ifPresent(key -> {
-            if (key.trim().isEmpty()) { // Kiểm tra nếu để trống
+            if (key.trim().isEmpty() || key.trim().length() == 8) { // Kiểm tra nếu để trống
                 receivedMessageArea.appendText("Invalid key! Cannot be empty.\n");
             }
             if (key.length() < 8) {
-                receivedMessageArea.appendText("Invalid key! Must be 8 characters or more.\n");
+                receivedMessageArea.appendText("Invalid key! Must be 8 characters.\n");
             } else {
                 decryptMessage(encryptedData, key);
             }
