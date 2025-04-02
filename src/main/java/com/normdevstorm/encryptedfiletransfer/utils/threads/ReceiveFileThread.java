@@ -14,7 +14,7 @@ import java.net.Socket;
 import java.util.Map;
 
 public class ReceiveFileThread extends Thread {
-    private static final int CHUNK_SIZE = 8096; // 1 KB chunk size
+    private static final int CHUNK_SIZE = 65536; // 1 KB chunk size
     private static final int ACK_TIMEOUT = 5000; // 5 seconds
 
     private final FileType type;

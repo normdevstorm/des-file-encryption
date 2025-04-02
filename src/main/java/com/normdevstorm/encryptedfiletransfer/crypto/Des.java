@@ -155,32 +155,42 @@ public class Des {
         int blockCount = paddedText.length / 8;
         byte[] result = new byte[paddedLength];
 
-        // Create a thread pool with the number of available processors
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        // Use a fork-join pool for better task management and work stealing
+        int parallelism = Runtime.getRuntime().availableProcessors() * 3;
+        ExecutorService executor = Executors.newWorkStealingPool(parallelism);
 
-        // Submit tasks to the executor
-        for (int blocknum = 0; blocknum < blockCount; blocknum++) {
-            final int blockIndex = blocknum;
+        try {
+            // Process blocks in batches for better efficiency
+            int batchSize = Math.max(1, blockCount / (parallelism * 4));
+
+            for (int startBlock = 0; startBlock < blockCount; startBlock += batchSize) {
+                final int start = startBlock;
+                final int end = Math.min(blockCount, startBlock + batchSize);
+
             executor.submit(() -> {
+                    for (int i = start; i < end; i++) {
                 byte[] block = new byte[8];
-                System.arraycopy(paddedText, blockIndex * 8, block, 0, 8);
-                byte[] encryptedBlock = processBlock(block, subKeys);
-                System.arraycopy(encryptedBlock, 0, result, blockIndex * 8, 8);
+                        System.arraycopy(paddedText, i * 8, block, 0, 8);
+                        byte[] processedBlock = processBlock(block, subKeys);
+                        System.arraycopy(processedBlock, 0, result, i * 8, 8);
+                    }
             });
         }
-
-        // Shutdown the executor and wait for all tasks to complete
+        } finally {
         executor.shutdown();
         try {
-            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
         } catch (InterruptedException e) {
+                executor.shutdownNow();
             Thread.currentThread().interrupt();
             throw new RuntimeException("Encryption interrupted", e);
+        }
         }
 
         // If decrypting, return original length
         if (decrypt) {
-            // Remove padding by finding the last non-zero byte
             return removeZeroPadding(result);
         }
 
@@ -244,82 +254,6 @@ public class Des {
         return Arrays.copyOf(data, i + 1);
     }
 
-    public byte[] encryptText(byte[] text, byte[] keyMaterial, boolean decrypt) {
-        byte[][] subKeys = generateSubkeys(keyMaterial);
-        if (decrypt) {
-            // Reverse the order of subkeys for decryption
-            for (int i = 0; i < subKeys.length / 2; i++) {
-                byte[] temp = subKeys[i];
-                subKeys[i] = subKeys[subKeys.length - 1 - i];
-                subKeys[subKeys.length - 1 - i] = temp;
-            }
-        }
-
-        return processText(text, subKeys);
-    }
-
-    private byte[] processText(byte[] textbytes, byte[][] subkeyarray) {
-        int blockCount = textbytes.length / 8;
-        byte[] tmp = new byte[8];
-
-        for (int blocknum = 0; blocknum < blockCount; blocknum++) {
-            // Initial permutation
-            System.arraycopy(textbytes, blocknum * 8, tmp, 0, 8);
-            tmp = useTable(tmp, IP);
-            System.arraycopy(tmp, 0, textbytes, blocknum * 8, 8);
-
-            byte[] holderL = new byte[4];
-            byte[] holderR = new byte[4];
-
-            // Split into left and right parts
-            System.arraycopy(textbytes, blocknum * 8, holderL, 0, 4);
-            System.arraycopy(textbytes, blocknum * 8 + 4, holderR, 0, 4);
-
-            // 16 rounds of processing
-            for (int stage = 1; stage <= 16; stage++) {
-                byte[] oldR = Arrays.copyOf(holderR, holderR.length);
-
-                // Expansion E
-                byte[] expandedR = useTable(holderR, E);
-                // XOR with the subkey
-                for (int i = 0; i < expandedR.length; i++) {
-                    expandedR[i] ^= subkeyarray[stage - 1][i];
-                }
-
-                // S-box substitution
-                byte[] sOutput = sbox(expandedR);
-
-                // Permutation P
-                sOutput = useTable(sOutput, P);
-
-                // XOR with left side and swap
-                for (int i = 0; i < holderL.length; i++) {
-                    holderR[i] = (byte) (holderL[i] ^ sOutput[i]);
-                }
-
-                holderL = oldR;
-
-                // Special handling after the 16th round
-                for (int pointer = 0; pointer < 4; pointer++) {
-                    textbytes[pointer + blocknum * 8] = holderL[pointer];
-                    textbytes[pointer + blocknum * 8 + 4] = holderR[pointer];
-                    if (stage == 16) {
-                        textbytes[pointer + blocknum * 8] = holderR[pointer];
-                        textbytes[pointer + blocknum * 8 + 4] = holderL[pointer];
-                    }
-                }
-
-                if (stage == 16) {
-                    System.arraycopy(textbytes, blocknum * 8, tmp, 0, 8);
-                    tmp = useTable(tmp, IP2);
-                    System.arraycopy(tmp, 0, textbytes, blocknum * 8, 8);
-                }
-            }
-        }
-
-        return textbytes;
-    }
-
 private byte[] useTable(byte[] arr, int[] table) {
         int len = table.length;
         int byteNum = (len - 1) / 8 + 1;
@@ -357,10 +291,36 @@ private byte[] useTable(byte[] arr, int[] table) {
     private byte[] sbox(byte[] input) {
         byte[] output = new byte[4];
 
-        // Input = 48 bits (expanded E after XOR with the key)
-        // Output = 32 bits after S-box substitution
-        // Process 8 sections (6 bits each)
+        // For very large inputs, process S-box sections in parallel
+        if (input.length > 48) {
+            ExecutorService executor = Executors.newWorkStealingPool();
+            try {
         for (int section = 0; section < 8; section++) {
+                    final int s = section;
+                    executor.submit(() -> processSboxSection(input, output, s));
+                }
+            } finally {
+                executor.shutdown();
+                try {
+                    if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                        executor.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    executor.shutdownNow();
+                    Thread.currentThread().interrupt();
+                }
+            }
+        } else {
+            // For standard DES blocks, sequential is faster due to low overhead
+            for (int section = 0; section < 8; section++) {
+                processSboxSection(input, output, section);
+            }
+        }
+
+        return output;
+    }
+
+    private void processSboxSection(byte[] input, byte[] output, int section) {
             // Get row bits (first and last bit of the section)
             int row = (getBitAt(input, section * 6) << 1) | getBitAt(input, section * 6 + 5);
 
@@ -373,15 +333,14 @@ private byte[] useTable(byte[] arr, int[] table) {
             // Get the S-box output (4 bits)
             byte halfOfByte = (byte) sboxPicker(col, row, section);
 
-            // Pack the 4 bits into the output bytes
+        // Pack the 4 bits into the output bytes - synchronized to avoid race conditions
+        synchronized(output) {
             if ((section & 1) == 0) {
                 output[section / 2] |= (byte) (halfOfByte << 4);
             } else {
                 output[section / 2] |= halfOfByte;
             }
         }
-
-        return output;
     }
 
     private static int sboxPicker(int col, int row, int index) {
@@ -412,19 +371,45 @@ private byte[] useTable(byte[] arr, int[] table) {
         byte[] keyBytesC = selectBits(keyBytes, 0, 28);
         byte[] keyBytesD = selectBits(keyBytes, 28, 28);
 
+        // Calculate all rotations in parallel
+        ExecutorService executor = Executors.newWorkStealingPool();
+        try {
         for (int i = 1; i <= 16; i++) {
-            // Apply rotation schedule according to DES standard
-            if (i == 1 || i == 2 || i == 9 || i == 16) {
-                keyBytesC = rotateLeft(keyBytesC, 28, 1);
-                keyBytesD = rotateLeft(keyBytesD, 28, 1);
+                final int round = i;
+                executor.submit(() -> {
+                    // Calculate rotated C and D parts
+                    byte[] rotatedC = keyBytesC;
+                    byte[] rotatedD = keyBytesD;
+
+                    // Apply cumulative rotations based on round number
+                    int totalRotation = 0;
+                    for (int j = 1; j <= round; j++) {
+                        if (j == 1 || j == 2 || j == 9 || j == 16) {
+                            totalRotation += 1;
             } else {
-                keyBytesC = rotateLeft(keyBytesC, 28, 2);
-                keyBytesD = rotateLeft(keyBytesD, 28, 2);
+                            totalRotation += 2;
             }
+                    }
+
+                    rotatedC = rotateLeft(keyBytesC, 28, totalRotation);
+                    rotatedD = rotateLeft(keyBytesD, 28, totalRotation);
 
             // Combine C and D blocks, then apply PC2 permutation
-            keyBytes = useTable(glueKey(keyBytesC, keyBytesD), PC2);
-            subKeyArray[i - 1] = keyBytes;
+                    byte[] combinedKey = glueKey(rotatedC, rotatedD);
+                    subKeyArray[round - 1] = useTable(combinedKey, PC2);
+                });
+            }
+        } finally {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Subkey generation interrupted", e);
+            }
         }
 
         return subKeyArray;
