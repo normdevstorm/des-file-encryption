@@ -144,8 +144,8 @@ public class ServerController extends GenericUIController {
     }
 
     private void getKeyFromServer(String key){
-        if (key.length() < 8) {
-            statusArea.appendText("Key must be at least 8 characters long\n");
+        if (key.length() != 8) {
+            statusArea.appendText("Key must be 8 characters long\n");
             return;
         }
 
