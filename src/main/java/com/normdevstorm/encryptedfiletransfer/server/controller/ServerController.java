@@ -193,7 +193,7 @@ public class ServerController extends GenericUIController {
 
                 // Đảm bảo khóa có độ dài chính xác cho DES (8 byte)
                 byte[] keyBytes = encryptionKey.getBytes();
-                if (keyBytes.length < 8) {
+                if (keyBytes.length != 8) {
                     Platform.runLater(() -> statusArea.appendText("Error: Encryption key must be at least 8 bytes!\n"));
                     return;
                 }

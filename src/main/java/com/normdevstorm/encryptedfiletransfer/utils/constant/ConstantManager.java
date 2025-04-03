@@ -7,6 +7,9 @@ public class ConstantManager {
     public static final int FILE_TRANSFER_PORT = 5000; // Your existing port
     public static final int SIGNALING_PORT = 5001;     // New port for signaling
     public static final int MESSAGING_PORT = 5050;     // New port for signaling
-    public static String serverIpAddress = "localhost";
-    public static String clientIpAddress = "localhost";
+//    public static String serverIpAddress = "localhost";
+//    public static String clientIpAddress = "localhost";
+
+    public static String serverIpAddress = "192.168.22.194";
+    public static String clientIpAddress = "192.168.22.201";
     }

@@ -124,7 +124,7 @@ public class ClientController extends GenericUIController {
             if (key.trim().isEmpty()) { // Kiểm tra nếu để trống
                 receivedMessageArea.appendText("Invalid key! Cannot be empty.\n");
             }
-            if (key.length() < 8) {
+            if (key.length() != 8) {
                 receivedMessageArea.appendText("Invalid key! Must be 8 characters or more.\n");
             } else {
                 decryptMessage(encryptedData, key);
